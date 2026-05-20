@@ -57,8 +57,8 @@ export default function NewsletterSection() {
               </p>
             </motion.div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col sm:flex-row gap-3" suppressHydrationWarning>
+              <div className="flex-1" suppressHydrationWarning>
                 <Input
                   {...register("email")}
                   type="email"

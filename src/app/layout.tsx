@@ -104,8 +104,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
-      <body className="font-inter bg-brand-cream antialiased">
+    <html lang="en" className={`${inter.variable} ${playfair.variable}`} suppressHydrationWarning>
+      <body className="font-inter bg-brand-cream antialiased" suppressHydrationWarning>
         <AuthProvider>
           <CartSync />
           {/* Navigation */}
