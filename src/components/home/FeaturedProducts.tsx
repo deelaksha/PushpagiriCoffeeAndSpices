@@ -4,14 +4,33 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import ProductCard from "@/components/shop/ProductCard";
 import { Button } from "@/components/ui/button";
-import { PRODUCTS } from "@/constants";
 import { ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getDocuments } from "@/lib/firebase/firestore";
+import { Product } from "@/types/firebase";
 
 export default function FeaturedProducts() {
-  const featuredCoffee = PRODUCTS.filter(
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await getDocuments<Product>("products");
+        setProducts(data);
+      } catch (error) {
+        console.error("Failed to fetch featured products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  const featuredCoffee = products.filter(
     (p) => p.category === "coffee" && p.isFeatured
   ).slice(0, 3);
-  const featuredSpices = PRODUCTS.filter(
+  const featuredSpices = products.filter(
     (p) => p.category === "spices" && p.isFeatured
   ).slice(0, 3);
 

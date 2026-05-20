@@ -8,6 +8,7 @@ import { ShoppingCart, Star, Heart, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/store/cartStore";
+import { useRouter } from "next/navigation";
 import { Product } from "@/types";
 import { formatPrice, calculateDiscount, getBadgeClass } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -32,8 +33,9 @@ export default function ProductCard({
   variant = "grid",
 }: ProductCardProps) {
   const { addItem, isInCart } = useCartStore();
+  const router = useRouter();
 
-  const defaultWeight = product.weightOptions[0];
+  const defaultWeight = product.weightOptions?.[0] ?? { weight: "", price: product.price };
   const inCart = isInCart(product.id, defaultWeight.weight);
   const discount = calculateDiscount(
     product.originalPrice || 0,
@@ -60,7 +62,7 @@ export default function ProductCard({
         <Link href={`/shop/${product.slug}`} className="block relative overflow-hidden">
           <div className="relative h-56 sm:h-64 bg-brand-cream">
             <Image
-              src={product.images[0]}
+              src={product.images?.[0]}
               alt={product.name}
               fill
               className="object-cover transition-transform duration-700 group-hover:scale-110"
@@ -76,11 +78,10 @@ export default function ProductCard({
                 <Button
                   size="icon"
                   className="w-10 h-10 bg-white text-brand-green-dark hover:bg-brand-green-dark hover:text-white shadow-md"
-                  asChild
+                  onClick={() => router.push(`/shop/${product.slug}`)}
+                  aria-label="View product"
                 >
-                  <Link href={`/shop/${product.slug}`} aria-label="View product">
-                    <Eye className="w-4 h-4" />
-                  </Link>
+                  <Eye className="w-4 h-4" />
                 </Button>
               </motion.div>
             </div>
@@ -222,7 +223,7 @@ export default function ProductCard({
         className="relative h-28 w-28 rounded-xl overflow-hidden bg-brand-cream shrink-0"
       >
         <Image
-          src={product.images[0]}
+          src={product.images?.[0]}
           alt={product.name}
           fill
           className="object-cover"

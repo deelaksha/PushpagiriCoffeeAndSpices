@@ -5,7 +5,9 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import CartDrawer from "@/components/layout/CartDrawer";
 import WhatsAppFloat from "@/components/layout/WhatsAppFloat";
+import CartSync from "@/components/layout/CartSync";
 import { BRAND } from "@/constants";
+import { AuthProvider } from "@/providers/AuthProvider";
 
 // =============================================
 // FONT CONFIGURATION
@@ -103,20 +105,23 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body className="font-inter bg-brand-cream antialiased">
-        {/* Navigation */}
-        <Navbar />
+        <AuthProvider>
+          <CartSync />
+          {/* Navigation */}
+          <Navbar />
 
-        {/* Main Content */}
-        <main className="min-h-screen">{children}</main>
+          {/* Main Content */}
+          <main className="min-h-screen">{children}</main>
 
-        {/* Footer */}
-        <Footer />
+          {/* Footer */}
+          <Footer />
 
-        {/* Cart Drawer */}
-        <CartDrawer />
+          {/* Cart Drawer */}
+          <CartDrawer />
 
-        {/* WhatsApp Float Button */}
-        <WhatsAppFloat />
+          {/* WhatsApp Float Button */}
+          <WhatsAppFloat />
+        </AuthProvider>
       </body>
     </html>
   );

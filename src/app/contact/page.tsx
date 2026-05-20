@@ -79,17 +79,19 @@ export default function ContactPage() {
 
             {/* Map Placeholder */}
             <div className="bg-white rounded-2xl shadow-card p-1 overflow-hidden">
-              <div
-                className="h-48 rounded-xl flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+              <a
+                href={BRAND.mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-48 rounded-xl flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity block"
                 style={{ background: "linear-gradient(135deg, #3A5A40 0%, #A8D5BA 100%)" }}
-                onClick={() => window.open(BRAND.mapUrl, "_blank")}
               >
                 <div className="text-center text-white">
                   <MapPin className="w-10 h-10 mx-auto mb-2" />
                   <p className="font-inter font-semibold">Choudlu, Karnataka</p>
                   <p className="font-inter text-xs opacity-70 mt-1">Click to open in Google Maps</p>
                 </div>
-              </div>
+              </a>
             </div>
           </div>
 

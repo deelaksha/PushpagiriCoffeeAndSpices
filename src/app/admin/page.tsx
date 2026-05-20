@@ -11,9 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { PRODUCTS } from "@/constants";
+import NextImage from "next/image";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
+import { getDocuments, addDocument, deleteDocument, updateDocument, getDocument } from "@/lib/firebase/firestore";
+import { uploadImage } from "@/lib/firebase/storage";
+import { Product, Order } from "@/types/firebase";
 
 // ── Sidebar Navigation Items ──────────────────
 const SIDEBAR_ITEMS = [
@@ -25,22 +29,7 @@ const SIDEBAR_ITEMS = [
   { icon: Settings, label: "Settings", id: "settings" },
 ];
 
-// ── Dummy Dashboard Data ──────────────────────
-const STATS = [
-  { label: "Total Revenue", value: "₹1,28,450", icon: TrendingUp, change: "+18%", positive: true },
-  { label: "Total Orders", value: "284", icon: ShoppingBag, change: "+12%", positive: true },
-  { label: "Customers", value: "196", icon: Users, change: "+8%", positive: true },
-  { label: "Products", value: String(PRODUCTS.length), icon: Package, change: "Active", positive: true },
-];
-
-const RECENT_ORDERS = [
-  { id: "PCS-001", customer: "Priya Sharma", product: "Arabica Coffee 250g", total: "₹450", status: "delivered" },
-  { id: "PCS-002", customer: "Rajesh Nair", product: "Filter Coffee 500g × 2", total: "₹1,398", status: "processing" },
-  { id: "PCS-003", customer: "Ananya K.", product: "Spice Master Collection", total: "₹1,299", status: "shipped" },
-  { id: "PCS-004", customer: "Deepak Menon", product: "Black Pepper 250g", total: "₹620", status: "pending" },
-  { id: "PCS-005", customer: "Kavya Reddy", product: "Cardamom 50g", total: "₹650", status: "confirmed" },
-];
-
+// ── Dummy Dashboard Data (Status Colors only) ──
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
   confirmed: "bg-blue-100 text-blue-700",
@@ -55,10 +44,153 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [productSearch, setProductSearch] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageType, setImageType] = useState<"url" | "upload">("url");
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  
+  const handleViewProductClick = (product: Product) => {
+    setViewProduct(product);
+    setIsViewModalOpen(true);
+  };
+  
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    slug: "",
+    price: 0,
+    stock: 0,
+    category: "coffee",
+  });
+  
+  // Settings State
+  const [storeSettings, setStoreSettings] = useState({
+    storeName: "Pushpagiri Coffee & Spice",
+    whatsappNumber: "+918277261881",
+    freeShippingThreshold: 999
+  });
 
-  const filteredProducts = PRODUCTS.filter((p) =>
+  const handleAddProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      let finalImageUrl = imageUrl;
+      
+      if (imageType === "upload" && imageFile) {
+        finalImageUrl = await uploadImage(imageFile, "products");
+      }
+
+      const productData = {
+        ...newProduct,
+        images: finalImageUrl ? [finalImageUrl] : [],
+      };
+
+      if (editingProductId) {
+        await updateDocument("products", editingProductId, productData);
+        setProducts(products.map(p => p.id === editingProductId ? { ...p, ...productData } as unknown as Product : p));
+      } else {
+        const id = await addDocument("products", productData);
+        setProducts([...products, { ...productData, id } as unknown as Product]);
+      }
+      setIsAddModalOpen(false);
+      setEditingProductId(null);
+      setNewProduct({ name: "", slug: "", price: 0, stock: 0, category: "coffee" });
+      setImageUrl("");
+      setImageFile(null);
+    } catch (error) {
+      console.error("Error saving product:", error);
+      alert("Failed to save product");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    try {
+      await deleteDocument("products", id);
+      setProducts(products.filter(p => p.id !== id));
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      alert("Failed to delete product");
+    }
+  };
+
+  const handleEditProductClick = (product: Product) => {
+    setNewProduct({
+      name: product.name,
+      slug: product.slug,
+      price: product.price,
+      stock: product.stock,
+      category: product.category as any,
+    });
+    setImageUrl(product.images?.[0] || "");
+    setImageType(product.images?.[0] ? "url" : "upload");
+    setEditingProductId(product.id);
+    setIsAddModalOpen(true);
+  };
+
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      await updateDocument("orders", orderId, { orderStatus: newStatus });
+      setOrders(orders.map(o => o.id === orderId ? { ...o, orderStatus: newStatus as any } : o));
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      alert("Failed to update order status");
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      await addDocument("settings", { id: "global", ...storeSettings });
+      alert("Settings saved successfully!");
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      alert("Failed to save settings");
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const fetchedProducts = await getDocuments<Product>("products");
+        const fetchedOrders = await getDocuments<Order>("orders");
+        const settingsDoc = await getDocument<any>("settings", "global");
+        
+        setProducts(fetchedProducts);
+        setOrders(fetchedOrders);
+        if (settingsDoc) {
+          setStoreSettings({
+            storeName: settingsDoc.storeName || "Pushpagiri Coffee & Spice",
+            whatsappNumber: settingsDoc.whatsappNumber || "+918277261881",
+            freeShippingThreshold: settingsDoc.freeShippingThreshold || 999
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch admin data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(productSearch.toLowerCase())
   );
+
+  const STATS_DYNAMIC = [
+    { label: "Total Revenue", value: formatPrice(orders.reduce((sum, o) => sum + o.total, 0)), icon: TrendingUp, change: "+18%", positive: true },
+    { label: "Total Orders", value: String(orders.length), icon: ShoppingBag, change: "+12%", positive: true },
+    { label: "Customers", value: String(new Set(orders.map(o => o.customerInfo?.email)).size), icon: Users, change: "+8%", positive: true },
+    { label: "Products", value: String(products.length), icon: Package, change: "Active", positive: true },
+  ];
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -136,7 +268,7 @@ export default function AdminPage() {
             <div className="space-y-6">
               {/* Stats */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {STATS.map((stat, i) => (
+                {STATS_DYNAMIC.map((stat, i) => (
                   <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
                     className="bg-white rounded-2xl p-5 shadow-card">
                     <div className="flex items-center justify-between mb-3">
@@ -169,15 +301,15 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {RECENT_ORDERS.map((order) => (
+                      {orders.slice(0, 5).map((order) => (
                         <tr key={order.id} className="hover:bg-muted/20 transition-colors">
-                          <td className="px-6 py-4 text-sm font-medium text-brand-green-dark">{order.id}</td>
-                          <td className="px-6 py-4 text-sm">{order.customer}</td>
-                          <td className="px-6 py-4 text-sm text-muted-foreground">{order.product}</td>
-                          <td className="px-6 py-4 text-sm font-bold">{order.total}</td>
+                          <td className="px-6 py-4 text-sm font-medium text-brand-green-dark">{order.orderId}</td>
+                          <td className="px-6 py-4 text-sm">{order.customerInfo?.name || 'Guest'}</td>
+                          <td className="px-6 py-4 text-sm text-muted-foreground">{order.products?.length} items</td>
+                          <td className="px-6 py-4 text-sm font-bold">{formatPrice(order.total)}</td>
                           <td className="px-6 py-4">
-                            <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full capitalize", STATUS_COLORS[order.status])}>
-                              {order.status}
+                            <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full capitalize", STATUS_COLORS[order.orderStatus] || "bg-gray-100 text-gray-700")}>
+                              {order.orderStatus}
                             </span>
                           </td>
                         </tr>
@@ -209,7 +341,13 @@ export default function AdminPage() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input placeholder="Search products..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="pl-10" />
                 </div>
-                <Button><Plus className="w-4 h-4" /> Add Product</Button>
+                <Button onClick={() => {
+                  setEditingProductId(null);
+                  setNewProduct({ name: "", slug: "", price: 0, stock: 0, category: "coffee" });
+                  setImageUrl("");
+                  setImageFile(null);
+                  setIsAddModalOpen(true);
+                }}><Plus className="w-4 h-4" /> Add Product</Button>
               </div>
 
               <div className="bg-white rounded-2xl shadow-card overflow-hidden">
@@ -224,11 +362,12 @@ export default function AdminPage() {
                     </thead>
                     <tbody className="divide-y divide-border">
                       {filteredProducts.map((product) => (
-                        <tr key={product.id} className="hover:bg-muted/20 transition-colors">
-                          <td className="px-6 py-4">
+                        <tr key={product.id} className="hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => handleViewProductClick(product)}>
+                          <td className="px-6 py-4 flex items-center gap-4">
+                                                        <NextImage src={product.images?.[0]} alt={product.name} width={60} height={60} className="object-cover rounded" />
                             <div>
                               <p className="font-medium text-sm text-brand-green-dark">{product.name}</p>
-                              <p className="text-xs text-muted-foreground">{product.sku}</p>
+                              <p className="text-xs text-muted-foreground">{product.slug}</p>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-sm capitalize">{product.category.replace("-", " ")}</td>
@@ -241,8 +380,8 @@ export default function AdminPage() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
-                              <button className="p-1.5 hover:bg-brand-green-light/20 rounded-lg transition-colors"><Edit className="w-4 h-4 text-brand-green-dark" /></button>
-                              <button className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-500" /></button>
+                              <button onClick={(e) => { e.stopPropagation(); handleEditProductClick(product); }} className="p-1.5 hover:bg-brand-green-light/20 rounded-lg transition-colors"><Edit className="w-4 h-4 text-brand-green-dark" /></button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteProduct(product.id); }} className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-500" /></button>
                             </div>
                           </td>
                         </tr>
@@ -267,20 +406,22 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {RECENT_ORDERS.map((order) => (
+                    {orders.map((order) => (
                       <tr key={order.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="px-6 py-4 text-sm font-medium text-brand-green-dark">{order.id}</td>
-                        <td className="px-6 py-4 text-sm">{order.customer}</td>
-                        <td className="px-6 py-4 text-sm text-muted-foreground">{order.product}</td>
-                        <td className="px-6 py-4 text-sm font-bold">{order.total}</td>
+                        <td className="px-6 py-4 text-sm font-medium text-brand-green-dark">{order.orderId}</td>
+                        <td className="px-6 py-4 text-sm">{order.customerInfo?.name || 'Guest'}</td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">{order.products?.map(p => p.name).join(", ") || 'Items'}</td>
+                        <td className="px-6 py-4 text-sm font-bold">{formatPrice(order.total)}</td>
                         <td className="px-6 py-4">
-                          <select defaultValue={order.status} className="text-xs border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-green-dark capitalize">
+                          <select value={order.orderStatus} onChange={(e) => handleUpdateOrderStatus(order.id!, e.target.value)} className="text-xs border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-green-dark capitalize">
                             {["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"].map((s) => (
                               <option key={s} value={s}>{s}</option>
                             ))}
                           </select>
                         </td>
-                        <td className="px-6 py-4 text-sm text-muted-foreground">May 2026</td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">
+                          {order.createdAt ? new Date(order.createdAt?.seconds ? order.createdAt.seconds * 1000 : order.createdAt).toLocaleDateString() : 'N/A'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -292,20 +433,20 @@ export default function AdminPage() {
           {/* ── CUSTOMERS ─────────────────────── */}
           {activeTab === "customers" && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {RECENT_ORDERS.map((order) => (
+              {orders.map((order) => (
                 <div key={order.id} className="bg-white rounded-2xl shadow-card p-5">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 bg-brand-green-dark rounded-full flex items-center justify-center text-white font-bold">
-                      {order.customer.charAt(0)}
+                      {(order.customerInfo?.name || 'G').charAt(0)}
                     </div>
                     <div>
-                      <p className="font-medium text-sm">{order.customer}</p>
-                      <p className="text-xs text-muted-foreground">{order.id}</p>
+                      <p className="font-medium text-sm">{order.customerInfo?.name || 'Guest'}</p>
+                      <p className="text-xs text-muted-foreground">{order.customerInfo?.email || 'No email'}</p>
                     </div>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    <p>Last Order: {order.product}</p>
-                    <p className="font-semibold text-brand-green-dark mt-1">{order.total}</p>
+                    <p>Last Order: {order.orderId}</p>
+                    <p className="font-semibold text-brand-green-dark mt-1">{formatPrice(order.total)}</p>
                   </div>
                 </div>
               ))}
@@ -334,24 +475,108 @@ export default function AdminPage() {
               <div className="bg-white rounded-2xl shadow-card p-6">
                 <h3 className="font-playfair text-xl font-bold text-brand-green-dark mb-5">Store Settings</h3>
                 <div className="space-y-4">
-                  <div><label className="text-sm font-medium mb-1.5 block">Store Name</label><Input defaultValue="Pushpagiri Coffee & Spice" /></div>
-                  <div><label className="text-sm font-medium mb-1.5 block">WhatsApp Number</label><Input defaultValue="+918277261881" /></div>
-                  <div><label className="text-sm font-medium mb-1.5 block">Free Shipping Threshold (₹)</label><Input type="number" defaultValue="999" /></div>
-                  <Button>Save Settings</Button>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl shadow-card p-6">
-                <h3 className="font-playfair text-xl font-bold text-brand-green-dark mb-3">Firebase Integration</h3>
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
-                  <p className="font-semibold mb-1">⚠️ Firebase Not Connected</p>
-                  <p>Configure your Firebase credentials in <code className="bg-amber-100 px-1 rounded">/src/lib/firebase.ts</code> to enable database, auth, and storage.</p>
+                  <div><label className="text-sm font-medium mb-1.5 block">Store Name</label><Input value={storeSettings.storeName} onChange={(e) => setStoreSettings({...storeSettings, storeName: e.target.value})} /></div>
+                  <div><label className="text-sm font-medium mb-1.5 block">WhatsApp Number</label><Input value={storeSettings.whatsappNumber} onChange={(e) => setStoreSettings({...storeSettings, whatsappNumber: e.target.value})} /></div>
+                  <div><label className="text-sm font-medium mb-1.5 block">Free Shipping Threshold (₹)</label><Input type="number" value={storeSettings.freeShippingThreshold} onChange={(e) => setStoreSettings({...storeSettings, freeShippingThreshold: Number(e.target.value)})} /></div>
+                  <Button onClick={handleSaveSettings}>Save Settings</Button>
                 </div>
               </div>
             </div>
           )}
         </main>
       </div>
+
+      {/* ── VIEW PRODUCT MODAL ────────────────── */}
+      {isViewModalOpen && viewProduct && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold font-playfair text-brand-green-dark">Product Details</h2>
+              <button onClick={() => { setIsViewModalOpen(false); setViewProduct(null); }} className="text-gray-500 hover:text-black">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex flex-col items-center space-y-4">
+              <NextImage src={viewProduct.images?.[0] ?? "/placeholder.png"} alt={viewProduct.name} width={200} height={200} className="object-cover rounded" />
+              <p className="font-playfair font-semibold text-brand-green-dark text-lg">{viewProduct.name}</p>
+              <p className="text-sm text-muted-foreground">{viewProduct.slug}</p>
+              <p className="text-sm font-medium">{formatPrice(viewProduct.price)}</p>
+              <p className="text-sm">Category: {viewProduct.category}</p>
+              <p className="text-sm">Stock: {viewProduct.stock}</p>
+              <div className="flex gap-2 mt-2">
+                <Button onClick={() => { handleEditProductClick(viewProduct); setIsViewModalOpen(false); }} variant="default">
+                  Edit
+                </Button>
+                <Button onClick={() => { setIsViewModalOpen(false); setViewProduct(null); }} variant="secondary">
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ADD PRODUCT MODAL ────────────────── */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold font-playfair text-brand-green-dark">{editingProductId ? "Edit Product" : "Add New Product"}</h2>
+              <button onClick={() => { setIsAddModalOpen(false); setEditingProductId(null); }} className="text-gray-500 hover:text-black">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAddProduct} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Product Name</label>
+                <Input required value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Slug URL</label>
+                <Input required value={newProduct.slug} onChange={(e) => setNewProduct({ ...newProduct, slug: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Price (₹)</label>
+                  <Input type="number" required value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Stock</label>
+                  <Input type="number" required value={newProduct.stock} onChange={(e) => setNewProduct({ ...newProduct, stock: Number(e.target.value) })} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Category</label>
+                <select className="w-full border border-gray-300 p-2 rounded-md" value={newProduct.category} onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}>
+                  <option value="coffee">Coffee</option>
+                  <option value="spices">Spices</option>
+                  <option value="honey">Honey</option>
+                </select>
+              </div>
+              <div className="border border-gray-200 p-4 rounded-md">
+                <label className="block text-sm font-medium mb-2">Product Image</label>
+                <div className="flex gap-4 mb-3">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" checked={imageType === 'url'} onChange={() => setImageType('url')} /> Image URL
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" checked={imageType === 'upload'} onChange={() => setImageType('upload')} /> Upload File
+                  </label>
+                </div>
+                {imageType === 'url' && (
+                  <Input placeholder="https://example.com/image.jpg" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
+                )}
+                {imageType === 'upload' && (
+                  <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+                )}
+              </div>
+              <Button type="submit" className="w-full mt-4" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : editingProductId ? "Save Changes" : "Add Product"}
+              </Button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

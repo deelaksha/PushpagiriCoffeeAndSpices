@@ -24,7 +24,11 @@ import { cn } from "@/lib/utils";
 // =============================================
 
 export default function Navbar() {
+  const [hasMounted, setHasMounted] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const pathname = usePathname();
@@ -172,11 +176,11 @@ export default function Navbar() {
                 variant="ghost"
                 size="icon"
                 onClick={toggleCart}
-                aria-label={`Shopping cart with ${count} items`}
+                aria-label="Shopping cart"
                 className="relative text-foreground hover:text-brand-green-dark"
               >
                 <ShoppingCart className="w-5 h-5" />
-                {count > 0 && (
+                {hasMounted && count > 0 && (
                   <motion.span
                     key={count}
                     initial={{ scale: 0 }}

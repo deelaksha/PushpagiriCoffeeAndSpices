@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    match /products/{productId} {
+      // Anyone can read products
+      allow read: if true;
+      // Only admins can create, update, delete products
+      allow write: if isAdmin();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /orders/{orderId} {
+      // Users can read their own orders, admins can read all
+      allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
+      // Users can create orders, but only admins can update/delete them
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
+    }
+
+    match /cart/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid || isAdmin();
+    }
+
+    match /wishlist/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /{document=**} {
+      // Deny by default for any unmatched collections
+      allow read, write: if false;
+    }
+  }
+}

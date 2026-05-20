@@ -24,6 +24,7 @@ interface CartStore {
     selectedWeight: string,
     price: number
   ) => void;
+  setItems: (items: CartItem[]) => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
@@ -94,6 +95,9 @@ export const useCartStore = create<CartStore>()(
           set((state) => ({ items: [...state.items, newItem] }));
         }
       },
+
+      // ─── Set Items (for Firebase Sync) ────────────
+      setItems: (items) => set({ items }),
 
       // ─── Remove Item from Cart ────────────────────
       removeItem: (itemId) => {

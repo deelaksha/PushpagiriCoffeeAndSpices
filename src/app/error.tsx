@@ -11,29 +11,27 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <html lang="en">
-      <body className="bg-brand-cream min-h-screen flex items-center justify-center px-4">
-        <div className="text-center max-w-lg">
-          <div className="text-7xl mb-6">⚠️</div>
-          <h1 className="font-playfair text-3xl font-bold text-brand-green-dark mb-3">
-            Something went wrong
-          </h1>
-          <p className="font-inter text-muted-foreground mb-2">
-            We encountered an unexpected error. Our team has been notified.
+    <div className="bg-brand-cream min-h-screen flex items-center justify-center px-4">
+      <div className="text-center max-w-lg">
+        <div className="text-7xl mb-6">⚠️</div>
+        <h1 className="font-playfair text-3xl font-bold text-brand-green-dark mb-3">
+          Something went wrong
+        </h1>
+        <p className="font-inter text-muted-foreground mb-2">
+          We encountered an unexpected error. Our team has been notified.
+        </p>
+        {error.digest && (
+          <p className="font-inter text-xs text-muted-foreground mb-8 bg-muted px-3 py-2 rounded-lg inline-block">
+            Error ID: {error.digest}
           </p>
-          {error.digest && (
-            <p className="font-inter text-xs text-muted-foreground mb-8 bg-muted px-3 py-2 rounded-lg inline-block">
-              Error ID: {error.digest}
-            </p>
-          )}
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button onClick={reset} size="lg">Try Again</Button>
-            <Button variant="outline" size="lg" asChild>
-              <Link href="/">Back to Home</Link>
-            </Button>
-          </div>
+        )}
+        <div className="flex flex-wrap justify-center gap-4">
+          <Button onClick={reset} size="lg">Try Again</Button>
+          <Button variant="outline" size="lg" asChild>
+            <Link href="/">Back to Home</Link>
+          </Button>
         </div>
-      </body>
-    </html>
+      </div>
+    </div>
   );
 }

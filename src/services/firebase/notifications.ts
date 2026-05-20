@@ -1,39 +1,42 @@
-/**
- * Firebase Newsletter & Contact Services — Placeholder
- *
- * TODO: Uncomment and implement when Firebase is connected.
- */
+import {
+  collection,
+  doc,
+  addDoc,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { db, FIREBASE_COLLECTIONS } from "@/lib/firebase";
+import { NewsletterSubscription, ContactFormData, WholesaleInquiry } from "@/types";
 
-import { NewsletterSubscription, ContactFormData } from "@/types";
-
-// ── SAVE NEWSLETTER SUBSCRIPTION ─────────────
+// ── SAVE NEWSLETTER SUBSCRIPTION ──────────────────────────────────────────────
+// Uses the email as the document ID so duplicate subscriptions are idempotent.
 export async function saveNewsletterSubscription(
   data: NewsletterSubscription
 ): Promise<void> {
-  // TODO: Replace with Firestore write
-  // const docRef = doc(db, "newsletter", data.email);
-  // await setDoc(docRef, { ...data, subscribedAt: serverTimestamp() }, { merge: true });
-  console.log("TODO: saveNewsletterSubscription — Firebase not connected", data);
+  const docRef = doc(db, FIREBASE_COLLECTIONS.NEWSLETTER, data.email);
+  await setDoc(
+    docRef,
+    { ...data, subscribedAt: serverTimestamp(), active: true },
+    { merge: true }
+  );
 }
 
-// ── SAVE CONTACT FORM ─────────────────────────
+// ── SAVE CONTACT FORM ─────────────────────────────────────────────────────────
 export async function saveContactForm(data: ContactFormData): Promise<void> {
-  // TODO: Replace with Firestore write
-  // await addDoc(collection(db, "contact_forms"), {
-  //   ...data,
-  //   submittedAt: serverTimestamp(),
-  //   status: "unread",
-  // });
-  console.log("TODO: saveContactForm — Firebase not connected", data);
+  await addDoc(collection(db, FIREBASE_COLLECTIONS.CONTACT_FORMS), {
+    ...data,
+    submittedAt: serverTimestamp(),
+    status: "unread",
+  });
 }
 
-// ── SAVE WHOLESALE INQUIRY ────────────────────
-export async function saveWholesaleInquiry(data: unknown): Promise<void> {
-  // TODO: Replace with Firestore write
-  // await addDoc(collection(db, "wholesale_inquiries"), {
-  //   ...data,
-  //   submittedAt: serverTimestamp(),
-  //   status: "new",
-  // });
-  console.log("TODO: saveWholesaleInquiry — Firebase not connected", data);
+// ── SAVE WHOLESALE INQUIRY ────────────────────────────────────────────────────
+export async function saveWholesaleInquiry(
+  data: WholesaleInquiry
+): Promise<void> {
+  await addDoc(collection(db, FIREBASE_COLLECTIONS.WHOLESALE_INQUIRIES), {
+    ...data,
+    submittedAt: serverTimestamp(),
+    status: "new",
+  });
 }

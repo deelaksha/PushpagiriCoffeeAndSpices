@@ -1,63 +1,93 @@
-/**
- * Firebase Orders Service — Placeholder
- *
- * TODO: Uncomment and implement when Firebase is connected.
- */
-
+import {
+  collection,
+  doc,
+  addDoc,
+  getDocs,
+  updateDoc,
+  query,
+  orderBy,
+  where,
+  serverTimestamp,
+} from "firebase/firestore";
+import { db, FIREBASE_COLLECTIONS } from "@/lib/firebase";
 import { Order, ShippingAddress, CartItem } from "@/types";
 import { generateOrderNumber } from "@/lib/utils";
 
-// ── SAVE ORDER ────────────────────────────────
+const COL = FIREBASE_COLLECTIONS.ORDERS;
+
+// ── SAVE ORDER ────────────────────────────────────────────────────────────────
 export async function saveOrder(
   customerInfo: ShippingAddress,
   cartItems: CartItem[],
-  total: number
+  total: number,
+  paymentMethod: Order["paymentMethod"] = "whatsapp"
 ): Promise<string> {
   const orderNumber = generateOrderNumber();
+  const shippingCost = total >= 999 ? 0 : 80;
 
-  // TODO: Replace with Firestore write
-  // const orderData: Omit<Order, "id"> = {
-  //   orderNumber,
-  //   customerInfo,
-  //   items: cartItems.map((item) => ({
-  //     productId: item.product.id,
-  //     productName: item.product.name,
-  //     quantity: item.quantity,
-  //     weight: item.selectedWeight,
-  //     price: item.price,
-  //     image: item.product.images[0],
-  //   })),
-  //   subtotal: total,
-  //   shippingCost: total >= 999 ? 0 : 80,
-  //   discount: 0,
-  //   total: total >= 999 ? total : total + 80,
-  //   status: "pending",
-  //   paymentMethod: "whatsapp",
-  //   paymentStatus: "pending",
-  //   createdAt: new Date().toISOString(),
-  //   updatedAt: new Date().toISOString(),
-  // };
-  // const docRef = await addDoc(collection(db, "orders"), orderData);
-  // return orderNumber;
+  const orderData = {
+    orderNumber,
+    customerInfo,
+    items: cartItems.map((item) => ({
+      productId: item.product.id,
+      productName: item.product.name,
+      quantity: item.quantity,
+      weight: item.selectedWeight,
+      price: item.price,
+      image: item.product.images[0] ?? "",
+    })),
+    subtotal: total,
+    shippingCost,
+    discount: 0,
+    total: total + shippingCost,
+    status: "pending" as Order["status"],
+    paymentMethod,
+    paymentStatus: "pending" as Order["paymentStatus"],
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
 
-  console.log("TODO: saveOrder — Firebase not connected", { orderNumber, customerInfo, cartItems, total });
+  await addDoc(collection(db, COL), orderData);
   return orderNumber;
 }
 
-// ── GET ALL ORDERS (ADMIN) ────────────────────
+// ── GET ALL ORDERS (ADMIN) ────────────────────────────────────────────────────
 export async function getAllOrders(): Promise<Order[]> {
-  // TODO: Replace with Firestore query
-  // const snapshot = await getDocs(collection(db, "orders"));
-  // return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Order));
-  return [];
+  const snap = await getDocs(
+    query(collection(db, COL), orderBy("createdAt", "desc"))
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Order));
 }
 
-// ── UPDATE ORDER STATUS (ADMIN) ───────────────
+// ── GET ORDERS BY CUSTOMER EMAIL ──────────────────────────────────────────────
+export async function getOrdersByEmail(email: string): Promise<Order[]> {
+  const q = query(
+    collection(db, COL),
+    where("customerInfo.email", "==", email),
+    orderBy("createdAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Order));
+}
+
+// ── UPDATE ORDER STATUS (ADMIN) ───────────────────────────────────────────────
 export async function updateOrderStatus(
   orderId: string,
   status: Order["status"]
 ): Promise<void> {
-  // TODO: Replace with Firestore update
-  // await updateDoc(doc(db, "orders", orderId), { status, updatedAt: serverTimestamp() });
-  console.log("TODO: updateOrderStatus — Firebase not connected", { orderId, status });
+  await updateDoc(doc(db, COL, orderId), {
+    status,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// ── UPDATE PAYMENT STATUS (ADMIN) ─────────────────────────────────────────────
+export async function updatePaymentStatus(
+  orderId: string,
+  paymentStatus: Order["paymentStatus"]
+): Promise<void> {
+  await updateDoc(doc(db, COL, orderId), {
+    paymentStatus,
+    updatedAt: serverTimestamp(),
+  });
 }

@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import ProductCard from "@/components/shop/ProductCard";
-import { PRODUCTS } from "@/constants";
 import { ProductCategory } from "@/types";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
+import { getDocuments } from "@/lib/firebase/firestore";
+import { Product } from "@/types/firebase";
 
 const CATEGORIES = [
   { value: "all", label: "All Products" },
@@ -33,9 +35,25 @@ export default function ShopPage() {
   const [sort, setSort] = useState("default");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [organicOnly, setOrganicOnly] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await getDocuments<Product>("products");
+        setProducts(data);
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   const filtered = useMemo(() => {
-    let result = [...PRODUCTS];
+    let result = [...products];
     if (category !== "all") result = result.filter((p) => p.category === category);
     if (organicOnly) result = result.filter((p) => p.isOrganic);
     if (search) result = result.filter((p) =>
@@ -45,11 +63,11 @@ export default function ShopPage() {
     switch (sort) {
       case "price-asc": result.sort((a, b) => a.price - b.price); break;
       case "price-desc": result.sort((a, b) => b.price - a.price); break;
-      case "rating": result.sort((a, b) => b.rating - a.rating); break;
-      case "popular": result.sort((a, b) => b.reviewCount - a.reviewCount); break;
+      case "rating": result.sort((a, b) => (b.rating || 0) - (a.rating || 0)); break;
+      case "popular": result.sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0)); break;
     }
     return result;
-  }, [search, category, sort, organicOnly]);
+  }, [search, category, sort, organicOnly, products]);
 
   return (
     <div className="min-h-screen bg-brand-cream">
@@ -148,7 +166,11 @@ export default function ShopPage() {
         </p>
 
         {/* Products */}
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-20 font-inter text-muted-foreground">
+            Loading products...
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="font-playfair text-2xl font-bold text-brand-green-dark mb-2">No products found</h3>
