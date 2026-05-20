@@ -13,13 +13,14 @@ export interface Product {
   slug: string;
   description: string;
   shortDescription: string;
-  category: "coffee" | "spices" | "premium-blends" | "wholesale-packs";
+  category: string;
   price: number;
   discountPrice?: number;
   stock: number;
   images: string[];
   featured?: boolean;
   isFeatured: boolean;
+  isActive: boolean;
   isOrganic: boolean;
   sku: string;
   badge?: string;

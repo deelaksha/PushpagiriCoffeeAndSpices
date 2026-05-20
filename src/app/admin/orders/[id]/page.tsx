@@ -96,15 +96,15 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
               {order.products?.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-4 py-2 border-b border-gray-100 last:border-0">
                   <div className="w-16 h-16 relative rounded-lg bg-gray-50 overflow-hidden shrink-0 border border-gray-100">
-                    {item.images?.[0] ? (
-                      <NextImage src={item.images[0]} alt={item.name} fill className="object-cover" />
+                    {item.image ? (
+                      <NextImage src={item.image} alt={item.name} fill className="object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Img</div>
                     )}
                   </div>
                   <div className="flex-1">
                     <p className="font-bold text-brand-green-dark">{item.name}</p>
-                    {item.selectedWeight && <p className="text-xs text-muted-foreground">Weight: {item.selectedWeight}</p>}
+                    {item.weightOption && <p className="text-xs text-muted-foreground">Weight: {item.weightOption}</p>}
                     <p className="text-sm font-medium">{formatPrice(item.price)} <span className="text-muted-foreground text-xs x {item.quantity}">x {item.quantity}</span></p>
                   </div>
                   <div className="font-bold text-lg text-brand-green-dark">
@@ -122,7 +122,7 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Shipping</span>
-                  <span className="font-medium">{order.shipping === 0 ? "Free" : formatPrice(order.shipping || 0)}</span>
+                  <span className="font-medium">{order.shippingCharge === 0 ? "Free" : formatPrice(order.shippingCharge || 0)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-100 text-brand-green-dark">
                   <span>Total</span>
@@ -161,9 +161,8 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
                   <div className="flex items-start gap-2">
                     <MapPin className="w-4 h-4 text-brand-green-light mt-0.5 shrink-0" />
                     <div>
-                      <p>{order.shippingAddress.line1}</p>
-                      {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
-                      <p>{order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postal_code}</p>
+                      <p>{order.shippingAddress.street}</p>
+                      <p>{order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}</p>
                       <p>{order.shippingAddress.country}</p>
                     </div>
                   </div>
@@ -194,16 +193,12 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
               <option value="cancelled">Cancelled</option>
             </select>
             
-            {order.paymentInfo && (
+            {order.paymentStatus && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Payment Info</p>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Method</span>
-                  <span className="font-medium uppercase">{order.paymentInfo.method}</span>
-                </div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Payment Status</p>
                 <div className="flex justify-between text-sm">
                   <span>Status</span>
-                  <span className="font-medium capitalize text-green-600">Paid</span>
+                  <span className="font-medium capitalize text-green-600">{order.paymentStatus}</span>
                 </div>
               </div>
             )}

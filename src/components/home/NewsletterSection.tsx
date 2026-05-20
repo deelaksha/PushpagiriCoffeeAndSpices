@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +11,11 @@ import { Leaf, Check } from "lucide-react";
 
 export default function NewsletterSection() {
   const [submitted, setSubmitted] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<NewsletterFormData>({
     resolver: zodResolver(newsletterSchema),
@@ -56,9 +61,11 @@ export default function NewsletterSection() {
                 Welcome to the Pushpagiri family. Check your inbox for a special welcome offer.
               </p>
             </motion.div>
+          ) : !mounted ? (
+            <div className="h-14" />
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col sm:flex-row gap-3" suppressHydrationWarning>
-              <div className="flex-1" suppressHydrationWarning>
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
                 <Input
                   {...register("email")}
                   type="email"

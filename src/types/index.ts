@@ -2,11 +2,7 @@
 // PRODUCT TYPES
 // =============================================
 
-export type ProductCategory =
-  | "coffee"
-  | "spices"
-  | "premium-blends"
-  | "wholesale-packs";
+export type ProductCategory = string;
 
 export type WeightOption = {
   weight: string;

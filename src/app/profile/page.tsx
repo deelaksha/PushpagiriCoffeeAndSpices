@@ -5,6 +5,7 @@ import { User, Package, MapPin, Edit, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/lib/firebase/auth";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { getDocuments } from "@/lib/firebase/firestore";
@@ -144,7 +145,7 @@ export default function ProfilePage() {
                     <Package className="w-8 h-8 text-gray-300" />
                   </div>
                   <p className="text-gray-500 mb-4">You haven't placed any orders yet.</p>
-                  <Button asChild><a href="/shop">Start Shopping</a></Button>
+                  <Button asChild><Link href="/shop">Start Shopping</Link></Button>
                 </div>
               ) : (
                 <div className="space-y-4">
