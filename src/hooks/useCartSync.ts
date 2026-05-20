@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { getDocument, updateDocument } from '@/lib/firebase/firestore';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -12,7 +12,7 @@ const setDocument = async (collectionName: string, id: string, data: object): Pr
 };
 
 export const useCartSync = () => {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const { items, setItems } = useCartStore();
 
   // Load cart from Firebase on login
