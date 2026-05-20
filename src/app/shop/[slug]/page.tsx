@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ProductCard from "@/components/shop/ProductCard";
 import { useCartStore } from "@/store/cartStore";
+import { useAuthStore } from "@/store/authStore";
 import { BRAND } from "@/constants";
 import { getDocuments } from "@/lib/firebase/firestore";
 import { where, limit } from "firebase/firestore"; // needed for queries
@@ -51,6 +52,7 @@ export default function ProductDetailPage() {
   const [selectedWeight, setSelectedWeight] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCartStore();
+  const { user, openLoginModal } = useAuthStore();
 
 
   useEffect(() => {
@@ -86,6 +88,10 @@ export default function ProductDetailPage() {
   const waMessage = `Hi! I'd like to order:\n\n*${name}* (${currentWeight.weight}) x${quantity}\nTotal: ${formatPrice(currentWeight.price * quantity)}\n\nPlease confirm availability and payment details.`;
 
   const handleAddToCart = () => {
+    if (!user) {
+      openLoginModal(() => addItem(productData, quantity, currentWeight.weight, currentWeight.price));
+      return;
+    }
     addItem(productData, quantity, currentWeight.weight, currentWeight.price);
   };
 

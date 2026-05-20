@@ -8,6 +8,7 @@ import { ShoppingCart, Star, Heart, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/store/cartStore";
+import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { Product } from "@/types";
 import { formatPrice, calculateDiscount, getBadgeClass } from "@/lib/utils";
@@ -33,6 +34,7 @@ export default function ProductCard({
   variant = "grid",
 }: ProductCardProps) {
   const { addItem, isInCart } = useCartStore();
+  const { user, openLoginModal } = useAuthStore();
   const router = useRouter();
 
   const defaultWeight = product.weightOptions?.[0] ?? { weight: "", price: product.price };
@@ -44,6 +46,10 @@ export default function ProductCard({
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (!user) {
+      openLoginModal(() => addItem(product, 1, defaultWeight.weight, defaultWeight.price));
+      return;
+    }
     addItem(product, 1, defaultWeight.weight, defaultWeight.price);
   };
 

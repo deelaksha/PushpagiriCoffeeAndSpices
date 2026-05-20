@@ -1,62 +1,62 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
-import { subscribeToAuthChanges } from '@/lib/firebase/auth';
-import { getDocument } from '@/lib/firebase/firestore';
-import { User as CustomUser } from '@/types/firebase';
+import { useEffect } from "react";
+import { subscribeToAuthChanges } from "@/lib/firebase/auth";
+import { useAuthStore } from "@/store/authStore";
+import { UserProfile } from "@/types/user";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
 
-interface AuthContextType {
-  user: User | null;
-  customUser: CustomUser | null;
-  loading: boolean;
-  isAdmin: boolean;
-}
-
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  customUser: null,
-  loading: true,
-  isAdmin: false,
-});
-
-export const useAuth = () => useContext(AuthContext);
-
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [customUser, setCustomUser] = useState<CustomUser | null>(null);
-  const [loading, setLoading] = useState(true);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { setUser, setUserProfile, setLoading } = useAuthStore();
 
   useEffect(() => {
-    const unsubscribe = subscribeToAuthChanges(async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        // Fetch custom user data from Firestore
-        const data = await getDocument<CustomUser>('users', firebaseUser.uid);
-        if (data) {
-          setCustomUser(data);
-        } else {
-          setCustomUser(null);
+    const unsubscribe = subscribeToAuthChanges(async (user) => {
+      setUser(user);
+      
+      if (user) {
+        try {
+          // Fetch user profile from Firestore
+          const userDocRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userDocRef);
+          
+          if (userSnap.exists()) {
+            setUserProfile({ uid: userSnap.id, ...userSnap.data() } as UserProfile);
+            
+            // Optionally update lastLogin
+            await setDoc(userDocRef, { 
+              lastLogin: serverTimestamp(),
+              updatedAt: serverTimestamp() 
+            }, { merge: true });
+          } else {
+            // Create new user profile if it doesn't exist
+            const newProfile = {
+              uid: user.uid,
+              name: user.displayName || "Valued Customer",
+              email: user.email,
+              photoURL: user.photoURL,
+              role: "customer",
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+              lastLogin: serverTimestamp(),
+              totalOrders: 0,
+              totalSpent: 0,
+            };
+            await setDoc(userDocRef, newProfile);
+            setUserProfile(newProfile as unknown as UserProfile);
+          }
+        } catch (error) {
+          console.error("Error fetching/creating user profile:", error);
         }
       } else {
-        setCustomUser(null);
+        setUserProfile(null);
       }
+      
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [setUser, setUserProfile, setLoading]);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        customUser,
-        loading,
-        isAdmin: customUser?.role === 'admin',
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  return <>{children}</>;
+}

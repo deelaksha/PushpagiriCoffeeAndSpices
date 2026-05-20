@@ -17,7 +17,7 @@ import { useCartStore } from "@/store/cartStore";
 import { checkoutSchema, type CheckoutFormData } from "@/lib/validations";
 import { formatPrice, generateWhatsAppOrderUrl } from "@/lib/utils";
 import { BRAND } from "@/constants";
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuthStore } from "@/store/authStore";
 import InvoiceTemplate from "@/components/invoice/InvoiceTemplate";
 import { generateInvoicePDF, downloadInvoicePDF, buildInvoiceFileName } from "@/components/invoice/InvoicePDFGenerator";
 import type { OrderEmailData } from "@/lib/invoiceHelpers";
@@ -217,7 +217,7 @@ function SuccessScreen({
 // ─── Main Checkout Page ───────────────────────────────────────────────────────
 
 export default function CheckoutPage() {
-  const { user } = useAuth();
+  const { user, userProfile, openLoginModal } = useAuthStore();
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
   const [firestoreDocId, setFirestoreDocId] = useState("");
@@ -236,7 +236,19 @@ export default function CheckoutPage() {
     handleSubmit,
     getValues,
     formState: { errors, isSubmitting },
-  } = useForm<CheckoutFormData>({ resolver: zodResolver(checkoutSchema) });
+  } = useForm<CheckoutFormData>({ 
+    resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      fullName: userProfile?.name || user?.displayName || "",
+      email: userProfile?.email || user?.email || "",
+      phone: userProfile?.phone || "",
+      addressLine1: userProfile?.address?.line1 || "",
+      addressLine2: userProfile?.address?.line2 || "",
+      city: userProfile?.address?.city || "",
+      state: userProfile?.address?.state || "",
+      pincode: userProfile?.address?.postal_code || "",
+    }
+  });
 
   // ── Handle Download ──────────────────────────────────────────────────────
   const handleDownload = useCallback(async () => {
@@ -433,6 +445,20 @@ export default function CheckoutPage() {
         <div className="text-6xl">🛒</div>
         <h2 className="font-playfair text-2xl font-bold text-brand-green-dark">No items to checkout</h2>
         <Button asChild><Link href="/shop">Browse Products</Link></Button>
+      </div>
+    );
+  }
+
+  // ── Protect Route ────────────────────────────────────────────────────────
+  if (!user) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-brand-cream gap-4 p-4 text-center">
+        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-2">
+          <User className="w-8 h-8 text-brand-green-dark" />
+        </div>
+        <h2 className="font-playfair text-2xl font-bold text-brand-green-dark">Login to Checkout</h2>
+        <p className="text-muted-foreground mb-4 max-w-md">Please sign in to securely complete your order and save your details for faster checkout next time.</p>
+        <Button onClick={() => openLoginModal()} size="lg">Sign in with Google</Button>
       </div>
     );
   }

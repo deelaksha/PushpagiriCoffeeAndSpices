@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, admin } from '@/lib/firebase/admin';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,6 +22,19 @@ export async function POST(req: NextRequest) {
     });
 
     // Optionally: Update inventory here or trigger a Firebase function
+
+    // Update User Profile metrics if logged in
+    if (data.userId && data.userId !== "guest") {
+      const userRef = adminDb?.collection('users').doc(data.userId);
+      if (userRef) {
+        await userRef.set({
+          totalOrders: admin.firestore.FieldValue.increment(1),
+          totalSpent: admin.firestore.FieldValue.increment(data.total || 0),
+          lastOrderDate: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
+    }
 
     return NextResponse.json({ id: orderRef?.id, orderId, message: 'Order created successfully' }, { status: 201 });
   } catch (error) {

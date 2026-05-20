@@ -8,6 +8,7 @@ import WhatsAppFloat from "@/components/layout/WhatsAppFloat";
 import CartSync from "@/components/layout/CartSync";
 import { BRAND } from "@/constants";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { GoogleLoginModal } from "@/components/auth/GoogleLoginModal";
 
 // =============================================
 // FONT CONFIGURATION
@@ -121,6 +122,9 @@ export default function RootLayout({
 
           {/* WhatsApp Float Button */}
           <WhatsAppFloat />
+
+          {/* Google Login Modal */}
+          <GoogleLoginModal />
         </AuthProvider>
       </body>
     </html>
