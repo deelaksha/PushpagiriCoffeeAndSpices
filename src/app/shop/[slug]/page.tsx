@@ -49,15 +49,15 @@ export default function ProductDetailPage() {
     fetchData();
   }, [slug]);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedWeight, setSelectedWeight] = useState<any>(null);
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCartStore();
   const { user, openLoginModal } = useAuthStore();
 
 
   useEffect(() => {
-    if (productData && productData.weightOptions && productData.weightOptions.length > 0) {
-      setSelectedWeight(productData.weightOptions[0]);
+    if (productData && productData.variants && productData.variants.length > 0) {
+      setSelectedVariant(productData.variants[0]);
     }
   }, [productData]);
 
@@ -65,12 +65,11 @@ export default function ProductDetailPage() {
 
   const {
     images = [],
-    weightOptions = [],
+    variants = [],
     name = "",
     category = "",
     rating = 0,
     reviewCount = 0,
-    originalPrice,
     shortDescription = "",
     isOrganic = false,
     origin = "",
@@ -82,17 +81,18 @@ export default function ProductDetailPage() {
   } = productData || {};
 
   const currentWeight = {
-    weight: selectedWeight?.weight ?? productData?.weightOptions?.[0]?.weight ?? "",
-    price: selectedWeight?.price ?? productData?.weightOptions?.[0]?.price ?? productData?.price ?? 0,
+    id: selectedVariant?.id ?? productData?.variants?.[0]?.id ?? "",
+    weightLabel: selectedVariant?.weightLabel ?? productData?.variants?.[0]?.weightLabel ?? "",
+    price: selectedVariant?.price ?? productData?.variants?.[0]?.price ?? productData?.price ?? 0,
   };
-  const waMessage = `Hi! I'd like to order:\n\n*${name}* (${currentWeight.weight}) x${quantity}\nTotal: ${formatPrice(currentWeight.price * quantity)}\n\nPlease confirm availability and payment details.`;
+  const waMessage = `Hi! I'd like to order:\n\n*${name}* (${currentWeight.weightLabel}) x${quantity}\nTotal: ${formatPrice(currentWeight.price * quantity)}\n\nPlease confirm availability and payment details.`;
 
   const handleAddToCart = () => {
     if (!user) {
-      openLoginModal(() => addItem(productData, quantity, currentWeight.weight, currentWeight.price));
+      openLoginModal(() => addItem(productData, currentWeight.id, currentWeight.weightLabel, currentWeight.price, quantity));
       return;
     }
-    addItem(productData, quantity, currentWeight.weight, currentWeight.price);
+    addItem(productData, currentWeight.id, currentWeight.weightLabel, currentWeight.price, quantity);
   };
 
   if (loading) {
@@ -134,14 +134,20 @@ export default function ProductDetailPage() {
               key={selectedImage}
               className="relative h-[400px] lg:h-[500px] rounded-3xl overflow-hidden bg-white shadow-soft mb-4"
             >
-              <Image
-                src={images[selectedImage]}
-                alt={name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                priority
-              />
+              {images[selectedImage] ? (
+                <Image
+                  src={images[selectedImage]}
+                  alt={name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  priority
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                  No Image Available
+                </div>
+              )}
               {badge && (
                 <div className={cn("absolute top-4 left-4 text-xs font-semibold px-3 py-1.5 rounded-full", getBadgeClass(badge))}>
                   {badge}
@@ -177,9 +183,6 @@ export default function ProductDetailPage() {
             </div>
             <div className="flex items-baseline gap-3 mb-6">
               <span className="font-playfair text-4xl font-bold text-brand-green-dark">{formatPrice(currentWeight.price)}</span>
-              {originalPrice && (
-                <span className="text-xl text-muted-foreground line-through">{formatPrice(originalPrice)}</span>
-              )}
             </div>
             <p className="font-inter text-muted-foreground leading-relaxed mb-6">{shortDescription}</p>
             <div className="flex flex-wrap gap-2 mb-6">
@@ -188,27 +191,23 @@ export default function ProductDetailPage() {
             </div>
             {/* Weight selector */}
             <div className="mb-6">
-              <p className="font-inter text-sm font-semibold text-brand-green-dark mb-3">Select Weight</p>
-              <div className="flex flex-wrap gap-3">
-                {weightOptions.map((opt: any) => (
-                  <button
-                    key={opt.weight}
-                    onClick={() => setSelectedWeight(opt)}
-                    disabled={opt.stock === 0}
-                    className={cn(
-                      "px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all",
-                      selectedWeight?.weight === opt.weight
-                        ? "border-brand-green-dark bg-brand-green-dark text-white"
-                        : opt.stock === 0
-                        ? "border-muted text-muted-foreground cursor-not-allowed opacity-50"
-                        : "border-border hover:border-brand-green-dark"
-                    )}
-                  >
-                    {opt.weight} — {formatPrice(opt.price)}
-                  </button>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Weight</label>
+              <select
+                value={selectedVariant?.id}
+                onChange={(e) => {
+                  const variant = variants.find((v: any) => v.id === e.target.value);
+                  if (variant) setSelectedVariant(variant);
+                }}
+                className="w-full md:w-64 h-12 px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-green-light focus:border-brand-green-light"
+              >
+                {variants?.map((v: any) => (
+                  <option key={v.id} value={v.id}>
+                    {v.weightLabel}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
+
             {/* Quantity */}
             <div className="flex items-center gap-4 mb-8">
               <p className="font-inter text-sm font-semibold text-brand-green-dark">Quantity</p>
@@ -223,6 +222,7 @@ export default function ProductDetailPage() {
               </div>
               <p className="font-playfair font-bold text-brand-green-dark">= {formatPrice(currentWeight.price * quantity)}</p>
             </div>
+
             {/* CTA Buttons */}
             <div className="flex gap-3 mb-8">
               <Button size="lg" className="flex-1" onClick={handleAddToCart}>

@@ -108,7 +108,7 @@ function buildProductRows(items: OrderItemData[]): string {
       <tr style="background:${rowBg};">
         <td style="padding:14px 16px;border-bottom:1px solid #E8EDE8;">
           <div style="font-weight:600;color:#1A2E1A;font-size:14px;">${item.productName}</div>
-          <div style="color:#6B7280;font-size:12px;margin-top:2px;">SKU / Product ID: ${item.productId}</div>
+          <div style="color:#6B7280;font-size:12px;margin-top:2px;">Product ID: ${item.productId}</div>
         </td>
         <td style="padding:14px 16px;border-bottom:1px solid #E8EDE8;text-align:center;color:#3A5A40;font-weight:600;">×${item.quantity}</td>
         <td style="padding:14px 16px;border-bottom:1px solid #E8EDE8;text-align:center;color:#6B7280;font-size:13px;">${item.weight}</td>
@@ -141,9 +141,7 @@ export function generateCustomerEmailHTML(order: OrderEmailData): string {
   const shippingLine = shippingCost === 0
     ? `<tr><td style="padding:6px 0;color:#6B7280;">Shipping</td><td style="padding:6px 0;text-align:right;color:#059669;font-weight:600;">FREE</td></tr>`
     : `<tr><td style="padding:6px 0;color:#6B7280;">Shipping</td><td style="padding:6px 0;text-align:right;">${formatINR(shippingCost)}</td></tr>`;
-  const discountLine = discount > 0
-    ? `<tr><td style="padding:6px 0;color:#6B7280;">Discount</td><td style="padding:6px 0;text-align:right;color:#059669;">−${formatINR(discount)}</td></tr>`
-    : "";
+
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -267,7 +265,7 @@ export function generateCustomerEmailHTML(order: OrderEmailData): string {
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;">
               <tr><td style="padding:6px 0;color:#6B7280;">Subtotal</td><td style="padding:6px 0;text-align:right;">${formatINR(subtotal)}</td></tr>
               ${shippingLine}
-              ${discountLine}
+
               <tr><td colspan="2" style="padding:6px 0;"><div style="height:1px;background:#C8E6C9;"></div></td></tr>
               <tr>
                 <td style="padding:8px 0;font-weight:700;color:#1A2E1A;font-size:15px;">Grand Total</td>
@@ -487,7 +485,7 @@ export function generateAdminEmailHTML(order: OrderEmailData): string {
           <table width="100%" style="font-size:12px;">
             <tr><td style="color:#6B7280;padding:3px 0;">Subtotal</td><td style="text-align:right;">${formatINR(subtotal)}</td></tr>
             <tr><td style="color:#6B7280;padding:3px 0;">Shipping</td><td style="text-align:right;${shippingCost === 0 ? "color:#059669;font-weight:600;" : ""}">${shippingCost === 0 ? "FREE" : formatINR(shippingCost)}</td></tr>
-            ${discount > 0 ? `<tr><td style="color:#6B7280;padding:3px 0;">Discount</td><td style="text-align:right;color:#059669;">−${formatINR(discount)}</td></tr>` : ""}
+
             <tr><td colspan="2" style="padding:4px 0;"><div style="height:1px;background:#C8E6C9;"></div></td></tr>
             <tr><td style="color:#1A2E1A;font-weight:700;padding:4px 0;">Grand Total</td><td style="text-align:right;color:#2D4A2D;font-weight:800;font-size:15px;">${formatINR(grandTotal)}</td></tr>
           </table>

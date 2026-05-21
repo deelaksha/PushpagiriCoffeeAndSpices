@@ -11,7 +11,7 @@ import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { Product } from "@/types";
-import { formatPrice, calculateDiscount, getBadgeClass } from "@/lib/utils";
+import { formatPrice, getBadgeClass } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 // =============================================
@@ -37,20 +37,17 @@ export default function ProductCard({
   const { user, openLoginModal } = useAuthStore();
   const router = useRouter();
 
-  const defaultWeight = product.weightOptions?.[0] ?? { weight: "", price: product.price };
-  const inCart = isInCart(product.id, defaultWeight.weight);
-  const discount = calculateDiscount(
-    product.originalPrice || 0,
-    defaultWeight.price
-  );
+  const defaultVariant = product.variants?.[0] ?? { id: "", weightLabel: "", price: product.price };
+  const inCart = isInCart(product.id, defaultVariant.id);
+
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!user) {
-      openLoginModal(() => addItem(product, 1, defaultWeight.weight, defaultWeight.price));
+      openLoginModal(() => addItem(product, defaultVariant.id, defaultVariant.weightLabel, defaultVariant.price));
       return;
     }
-    addItem(product, 1, defaultWeight.weight, defaultWeight.price);
+    addItem(product, defaultVariant.id, defaultVariant.weightLabel, defaultVariant.price);
   };
 
   // ─── Grid Variant ─────────────────────────
@@ -104,11 +101,7 @@ export default function ProductCard({
                   {product.badge}
                 </span>
               )}
-              {discount > 0 && (
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-500 text-white">
-                  -{discount}%
-                </span>
-              )}
+
               {product.isOrganic && (
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-800">
                   🌿 Organic
@@ -165,16 +158,11 @@ export default function ProductCard({
             <div>
               <div className="flex items-baseline gap-2">
                 <span className="font-playfair text-xl font-bold text-brand-green-dark">
-                  {formatPrice(defaultWeight.price)}
+                  {formatPrice(defaultVariant.price)}
                 </span>
-                {product.originalPrice && (
-                  <span className="text-sm text-muted-foreground line-through">
-                    {formatPrice(product.originalPrice)}
-                  </span>
-                )}
               </div>
               <p className="text-xs text-muted-foreground">
-                {defaultWeight.weight}
+                {defaultVariant.weightLabel}
               </p>
             </div>
 
@@ -182,17 +170,13 @@ export default function ProductCard({
             <div
               className={cn(
                 "text-xs font-medium px-2 py-1 rounded-full",
-                product.stock > 20
+                product.stock > 0
                   ? "bg-green-100 text-green-700"
-                  : product.stock > 0
-                  ? "bg-amber-100 text-amber-700"
                   : "bg-red-100 text-red-700"
               )}
             >
-              {product.stock > 20
+              {product.stock > 0
                 ? "In Stock"
-                : product.stock > 0
-                ? `Only ${product.stock} left`
                 : "Out of Stock"}
             </div>
           </div>
@@ -248,13 +232,8 @@ export default function ProductCard({
         </Link>
         <div className="flex items-center gap-2 mt-1">
           <span className="font-bold text-brand-green-dark">
-            {formatPrice(defaultWeight.price)}
+            {formatPrice(defaultVariant.price)}
           </span>
-          {product.originalPrice && (
-            <span className="text-sm text-muted-foreground line-through">
-              {formatPrice(product.originalPrice)}
-            </span>
-          )}
         </div>
         <Button
           size="sm"

@@ -148,7 +148,7 @@ export default function CartDrawer() {
                               {item.product.name}
                             </h4>
                             <p className="font-inter text-xs text-muted-foreground mb-2">
-                              {item.selectedWeight}
+                              {item.weightLabel}
                             </p>
 
                             <div className="flex items-center justify-between">

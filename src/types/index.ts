@@ -4,8 +4,9 @@
 
 export type ProductCategory = string;
 
-export type WeightOption = {
-  weight: string;
+export type ProductVariant = {
+  id: string;
+  weightLabel: string;
   price: number;
   stock: number;
 };
@@ -19,10 +20,8 @@ export interface Product {
   shortDescription: string;
   images: string[];
   price: number;
-  originalPrice?: number;
-  weightOptions: WeightOption[];
+  variants: ProductVariant[];
   stock: number;
-  sku: string;
   badge?: string;
   isFeatured: boolean;
   isOrganic: boolean;
@@ -46,7 +45,8 @@ export interface CartItem {
   id: string;
   product: Product;
   quantity: number;
-  selectedWeight: string;
+  variantId: string;
+  weightLabel: string;
   price: number;
 }
 
@@ -84,7 +84,8 @@ export interface OrderItem {
   productId: string;
   productName: string;
   quantity: number;
-  weight: string;
+  variantId: string;
+  weightLabel: string;
   price: number;
   image: string;
 }

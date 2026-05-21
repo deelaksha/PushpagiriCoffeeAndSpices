@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
@@ -20,13 +20,16 @@ const productSchema = z.object({
   shortDescription: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   price: z.coerce.number().min(0),
-  discountPrice: z.coerce.number().optional(),
-  stock: z.coerce.number().min(0),
-  sku: z.string().optional(),
+  inStock: z.boolean().default(true),
   tags: z.string().optional(),
   isFeatured: z.boolean().default(false),
   isActive: z.boolean().default(true),
-  weightOptions: z.string().optional(), // Comma separated string for simplicity
+  variants: z.array(z.object({
+    id: z.string().optional(),
+    weightLabel: z.string().min(1, "Weight label is required"),
+    price: z.coerce.number().min(0, "Price must be >= 0"),
+    inStock: z.boolean().default(true),
+  })).min(1, "At least one weight variant is required"),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -51,14 +54,19 @@ export function ProductForm({ initialData, onSubmitAction }: ProductFormProps) {
       shortDescription: initialData?.shortDescription || "",
       category: initialData?.category || "coffee",
       price: initialData?.price || 0,
-      discountPrice: initialData?.discountPrice || 0,
-      stock: initialData?.stock || 0,
-      sku: initialData?.sku || "",
+      inStock: initialData ? initialData.stock > 0 : true,
       tags: initialData?.tags?.join(", ") || "",
       isFeatured: initialData?.isFeatured || false,
       isActive: initialData?.isActive !== false,
-      weightOptions: initialData?.weightOptions?.join(", ") || "",
+      variants: initialData?.variants?.length ? initialData.variants.map(v => ({...v, inStock: v.stock > 0})) : [
+        { id: Date.now().toString(), weightLabel: "500g", price: 0, inStock: true }
+      ],
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    name: "variants",
+    control: form.control,
   });
 
   const generateSlug = (name: string) => {
@@ -100,10 +108,20 @@ export function ProductForm({ initialData, onSubmitAction }: ProductFormProps) {
 
       const allImages = [...existingImages, ...uploadedUrls];
 
+      const { inStock, variants, ...restValues } = values;
+
       const productData: Partial<Product> = {
-        ...values,
+        ...restValues,
+        stock: inStock ? 999999 : 0,
         tags: values.tags ? values.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
-        weightOptions: values.weightOptions ? values.weightOptions.split(",").map(t => t.trim()).filter(Boolean) : [],
+        variants: variants.map(v => {
+          const { inStock: vInStock, ...vRest } = v;
+          return {
+            ...vRest,
+            stock: vInStock ? 999999 : 0,
+            id: v.id || Date.now().toString() + Math.random().toString(36).substring(7)
+          };
+        }),
         images: allImages,
         updatedAt: new Date(),
       };
@@ -144,19 +162,11 @@ export function ProductForm({ initialData, onSubmitAction }: ProductFormProps) {
               <Input type="number" {...form.register("price")} />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Discount Price (₹)</label>
-              <Input type="number" {...form.register("discountPrice")} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-1 block">Stock Quantity *</label>
-              <Input type="number" {...form.register("stock")} />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">SKU</label>
-              <Input {...form.register("sku")} placeholder="e.g. COF-001" />
+              <label className="text-sm font-medium mb-1 block">Stock Status *</label>
+              <select {...form.register("inStock", { setValueAs: v => v === "true" })} className="w-full h-10 px-3 py-2 border border-input rounded-md text-sm bg-background">
+                <option value="true">In Stock</option>
+                <option value="false">Out of Stock</option>
+              </select>
             </div>
           </div>
 
@@ -170,9 +180,43 @@ export function ProductForm({ initialData, onSubmitAction }: ProductFormProps) {
             </select>
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-1 block">Weight Options (Comma separated)</label>
-            <Input {...form.register("weightOptions")} placeholder="e.g. 250g, 500g, 1kg" />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Weight Variants *</label>
+              <Button type="button" variant="outline" size="sm" onClick={() => append({ weightLabel: "", price: 0, inStock: true, id: Date.now().toString() })}>
+                <Plus className="w-4 h-4 mr-2" /> Add Weight Option
+              </Button>
+            </div>
+            {fields.map((field, index) => (
+              <div key={field.id} className="flex gap-2 items-start border p-3 rounded-lg relative bg-gray-50/50">
+                <div className="flex-1 grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">Weight Label</label>
+                    <Input {...form.register(`variants.${index}.weightLabel` as const)} placeholder="e.g. 250g" className="h-8 text-sm" />
+                    {form.formState.errors.variants?.[index]?.weightLabel && <p className="text-red-500 text-[10px] mt-1">{form.formState.errors.variants[index]?.weightLabel?.message}</p>}
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">Price (₹)</label>
+                    <Input type="number" {...form.register(`variants.${index}.price` as const)} className="h-8 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">Status</label>
+                    <select {...form.register(`variants.${index}.inStock` as const, { setValueAs: v => v === "true" })} className="w-full h-8 px-2 py-1 border border-input rounded-md text-sm bg-background">
+                      <option value="true">In Stock</option>
+                      <option value="false">Out of Stock</option>
+                    </select>
+                  </div>
+                </div>
+                {fields.length > 1 && (
+                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="mt-5 text-red-500 hover:bg-red-50 h-8 w-8">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            {form.formState.errors.variants?.message && (
+              <p className="text-red-500 text-xs mt-1">{form.formState.errors.variants.message}</p>
+            )}
           </div>
           
           <div>

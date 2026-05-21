@@ -18,7 +18,7 @@ function buildPrintableInvoiceHTML(order: Record<string, unknown>): string {
   const {
     orderId, orderNumber, invoiceNumber, invoiceDate,
     customerInfo, shippingAddress, products, items,
-    subtotal, shippingCharge, shippingCost, discount,
+    subtotal, shippingCharge, shippingCost,
     total, grandTotal, paymentMethod, orderNotes,
     createdAt,
   } = order as Record<string, any>;
@@ -30,7 +30,7 @@ function buildPrintableInvoiceHTML(order: Record<string, unknown>): string {
     productName: p.product?.name ?? p.productName ?? "Product",
     productId:   p.product?.id  ?? p.productId   ?? "-",
     quantity:    p.quantity ?? 1,
-    weight:      p.selectedWeight ?? p.weight ?? "-",
+    weight:      p.weightLabel ?? p.weight ?? "-",
     price:       p.price ?? 0,
   }))) ?? [];
 
@@ -45,7 +45,7 @@ function buildPrintableInvoiceHTML(order: Record<string, unknown>): string {
 
   const resolvedSubtotal  = subtotal       ?? 0;
   const resolvedShipping  = shippingCharge ?? shippingCost ?? 0;
-  const resolvedDiscount  = discount       ?? 0;
+
   const resolvedTotal     = grandTotal     ?? total        ?? 0;
   const resolvedInvoice   = invoiceNumber  ?? `INV-${Date.now()}`;
   const resolvedDate      = invoiceDate    ?? createdAt    ?? new Date().toISOString();
@@ -64,9 +64,7 @@ function buildPrintableInvoiceHTML(order: Record<string, unknown>): string {
       <td style="padding:12px 14px;text-align:right;border-bottom:1px solid #E8EDE8;font-weight:700;color:#2D4A2D;">${formatINR(item.price * item.quantity)}</td>
     </tr>`).join("");
 
-  const discountRow = resolvedDiscount > 0
-    ? `<tr><td style="padding:5px 0;color:#6B7280;">Discount</td><td style="text-align:right;color:#059669;">−${formatINR(resolvedDiscount)}</td></tr>`
-    : "";
+
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -203,7 +201,7 @@ function buildPrintableInvoiceHTML(order: Record<string, unknown>): string {
           <table style="width:100%;font-size:13px;">
             <tr><td style="color:#6B7280;padding:4px 0;">Subtotal</td><td style="text-align:right;">${formatINR(resolvedSubtotal)}</td></tr>
             <tr><td style="color:#6B7280;padding:4px 0;">Shipping</td><td style="text-align:right;${resolvedShipping === 0 ? "color:#059669;font-weight:600;" : ""}">${resolvedShipping === 0 ? "FREE" : formatINR(resolvedShipping)}</td></tr>
-            ${discountRow}
+
             <tr><td colspan="2" style="padding:6px 0;"><div style="height:1px;background:#C8E6C9;"></div></td></tr>
             <tr><td style="color:#6B7280;font-size:11px;padding:3px 0;">Tax (Incl.)</td><td style="text-align:right;color:#9CA3AF;font-size:11px;">GST Pending</td></tr>
           </table>

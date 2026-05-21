@@ -392,12 +392,6 @@ const InvoiceTemplate = React.forwardRef<HTMLDivElement, InvoiceTemplateProps>(
                     {shippingCost === 0 ? "FREE" : formatINR(shippingCost)}
                   </span>
                 </div>
-                {discount > 0 && (
-                  <div style={S.totalsRow}>
-                    <span style={{ color: "#6B7280" }}>Discount</span>
-                    <span style={{ color: "#059669" }}>−{formatINR(discount)}</span>
-                  </div>
-                )}
                 <div style={{ height: "1px", background: "#C8E6C9", margin: "8px 0" }} />
                 <div style={S.totalsRow}>
                   <span style={{ color: "#6B7280", fontSize: "11px" }}>Tax (Incl.)</span>

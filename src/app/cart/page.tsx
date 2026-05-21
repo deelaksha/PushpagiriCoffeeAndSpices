@@ -60,7 +60,7 @@ export default function CartPage() {
                         <Link href={`/shop/${item.product.slug}`}>
                           <h3 className="font-playfair font-bold text-brand-green-dark hover:text-brand-brown transition-colors">{item.product.name}</h3>
                         </Link>
-                        <p className="font-inter text-xs text-muted-foreground mt-1">Weight: {item.selectedWeight}</p>
+                        <p className="font-inter text-xs text-muted-foreground mt-1">Weight: {item.weightLabel}</p>
                         <p className="font-inter text-xs text-muted-foreground">Unit Price: {formatPrice(item.price)}</p>
                       </div>
                       <button onClick={() => removeItem(item.id)} className="text-muted-foreground hover:text-red-500 transition-colors p-1" aria-label="Remove">

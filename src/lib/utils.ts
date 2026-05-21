@@ -111,17 +111,6 @@ export function isValidPincode(pincode: string): boolean {
 }
 
 /**
- * Calculates the discount percentage.
- */
-export function calculateDiscount(
-  originalPrice: number,
-  currentPrice: number
-): number {
-  if (!originalPrice || originalPrice <= currentPrice) return 0;
-  return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
-}
-
-/**
  * Debounce function for search inputs.
  */
 export function debounce<T extends (...args: Parameters<T>) => ReturnType<T>>(

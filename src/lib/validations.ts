@@ -128,9 +128,9 @@ export const productSchema = z.object({
     .string()
     .min(10, "Short description must be at least 10 characters"),
   price: z.number().min(1, "Price must be greater than 0"),
-  originalPrice: z.number().optional(),
+
   stock: z.number().min(0, "Stock cannot be negative"),
-  sku: z.string().min(3, "SKU must be at least 3 characters"),
+
   isOrganic: z.boolean(),
   isFeatured: z.boolean(),
   origin: z.string().min(3, "Origin must be at least 3 characters"),

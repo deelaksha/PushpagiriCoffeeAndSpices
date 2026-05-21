@@ -106,7 +106,7 @@ export default function ProductsPage() {
                     </td>
                     <td className="px-6 py-4 capitalize">{product.category.replace("-", " ")}</td>
                     <td className="px-6 py-4 font-medium">{formatPrice(product.price)}</td>
-                    <td className="px-6 py-4">{product.stock}</td>
+                    <td className="px-6 py-4">{product.stock > 0 ? "Yes" : "No"}</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
                         <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full w-fit", product.stock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>

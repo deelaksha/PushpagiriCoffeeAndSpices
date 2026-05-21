@@ -81,3 +81,28 @@ export const deleteDocument = async (collectionName: string, id: string): Promis
   const docRef = doc(db, collectionName, id);
   await deleteDoc(docRef);
 };
+
+// ── CART HELPERS ──────────────────────────────────────────────────────────────
+import type { FirestoreCartItem } from '@/types/firebase';
+
+/** Fetch the Firestore cart document for a logged-in user. */
+export const getCartByUid = async (uid: string): Promise<{ items: FirestoreCartItem[] } | null> => {
+  const docRef = doc(db, 'carts', uid);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return docSnap.data() as { items: FirestoreCartItem[] };
+  }
+  return null;
+};
+
+/** Upsert the full cart for a user. */
+export const setCart = async (uid: string, items: FirestoreCartItem[]): Promise<void> => {
+  const docRef = doc(db, 'carts', uid);
+  await setDoc(docRef, { uid, items, updatedAt: serverTimestamp() }, { merge: true });
+};
+
+/** Clear the user's Firestore cart (e.g. after checkout or logout). */
+export const clearFirestoreCart = async (uid: string): Promise<void> => {
+  const docRef = doc(db, 'carts', uid);
+  await setDoc(docRef, { uid, items: [], updatedAt: serverTimestamp() }, { merge: true });
+};

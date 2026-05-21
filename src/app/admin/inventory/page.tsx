@@ -36,8 +36,7 @@ export default function InventoryPage() {
   };
 
   const handleStockChange = (productId: string, value: string) => {
-    const numValue = parseInt(value, 10);
-    if (isNaN(numValue) || numValue < 0) return;
+    const numValue = value === "true" ? 999999 : 0;
     
     setStockUpdates(prev => ({
       ...prev,
@@ -81,7 +80,6 @@ export default function InventoryPage() {
     p.sku?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const lowStockProducts = products.filter(p => p.stock < 10);
   const outOfStockProducts = products.filter(p => p.stock === 0);
 
   return (
@@ -109,13 +107,13 @@ export default function InventoryPage() {
           </div>
         </div>
         
-        <div className="bg-white p-5 rounded-2xl shadow-card flex items-center gap-4 border-l-4 border-amber-500">
-          <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center font-bold text-xl">
-            {lowStockProducts.length}
+        <div className="bg-white p-5 rounded-2xl shadow-card flex items-center gap-4 border-l-4 border-green-500">
+          <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-bold text-xl">
+            {products.length - outOfStockProducts.length}
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Low Stock (&lt;10)</p>
-            <p className="font-semibold text-lg">Needs reorder</p>
+            <p className="text-sm text-muted-foreground">In Stock</p>
+            <p className="font-semibold text-lg">Available items</p>
           </div>
         </div>
         
@@ -153,8 +151,7 @@ export default function InventoryPage() {
                   <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide">Product</th>
                   <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide">SKU</th>
                   <th className="px-6 py-3 text-left font-semibold uppercase tracking-wide">Status</th>
-                  <th className="px-6 py-3 text-right font-semibold uppercase tracking-wide">Current Stock</th>
-                  <th className="px-6 py-3 text-right font-semibold uppercase tracking-wide w-40">Update Stock</th>
+                  <th className="px-6 py-3 text-right font-semibold uppercase tracking-wide w-40">Update Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -163,7 +160,6 @@ export default function InventoryPage() {
                     ? stockUpdates[product.id!] 
                     : product.stock;
                     
-                  const isLow = currentStock > 0 && currentStock < 10;
                   const isOut = currentStock === 0;
                   const hasChanged = stockUpdates[product.id!] !== undefined && stockUpdates[product.id!] !== product.stock;
 
@@ -185,31 +181,19 @@ export default function InventoryPage() {
                           <span className="flex items-center gap-1 text-red-600 text-xs font-medium">
                             <AlertTriangle className="w-3 h-3" /> Out of Stock
                           </span>
-                        ) : isLow ? (
-                          <span className="flex items-center gap-1 text-amber-600 text-xs font-medium">
-                            <AlertTriangle className="w-3 h-3" /> Low Stock
-                          </span>
                         ) : (
                           <span className="text-green-600 text-xs font-medium">In Stock</span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <span className={cn(
-                          "font-mono text-base font-medium",
-                          hasChanged ? "text-brand-green-dark" : "text-gray-600"
-                        )}>
-                          {currentStock}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Input 
-                          type="number" 
-                          min="0"
-                          value={stockUpdates[product.id!] !== undefined ? stockUpdates[product.id!] : ''}
+                        <select 
+                          value={currentStock > 0 ? "true" : "false"}
                           onChange={(e) => handleStockChange(product.id!, e.target.value)}
-                          placeholder={String(product.stock)}
-                          className={cn("w-24 ml-auto text-right font-mono", hasChanged && "border-brand-green-light bg-brand-cream/20")}
-                        />
+                          className={cn("w-32 ml-auto text-right p-2 border rounded-md bg-white", hasChanged && "border-brand-green-light bg-brand-cream/20")}
+                        >
+                          <option value="true">In Stock</option>
+                          <option value="false">Out of Stock</option>
+                        </select>
                       </td>
                     </tr>
                   )

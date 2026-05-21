@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,10 +12,15 @@ import {
   Phone,
   ChevronDown,
   Leaf,
+  User,
+  LogOut,
+  Package,
+  UserCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/store/cartStore";
+import { useAuthStore } from "@/store/authStore";
+import { logout } from "@/lib/firebase/auth";
 import { NAV_ITEMS, BRAND } from "@/constants";
 import { cn } from "@/lib/utils";
 
@@ -26,20 +31,24 @@ import { cn } from "@/lib/utils";
 export default function Navbar() {
   const [hasMounted, setHasMounted] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  const pathname = usePathname();
+  const { itemCount, toggleCart } = useCartStore();
+  const { user, userProfile, openLoginModal, clearPendingAction } = useAuthStore();
+  const { clearItems } = useCartStore();
+  const count = hasMounted ? itemCount() : 0;
+
   useEffect(() => {
     setHasMounted(true);
   }, []);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const pathname = usePathname();
-  const { itemCount, openCart, toggleCart } = useCartStore();
-  const count = itemCount();
 
   // Track scroll for sticky navbar styling
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -47,16 +56,48 @@ export default function Navbar() {
   // Close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setIsProfileOpen(false);
   }, [pathname]);
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const isActiveLink = (href: string) => {
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
   };
 
+  const handleSignOut = async () => {
+    try {
+      setIsProfileOpen(false);
+      clearItems();         // clear cart on logout
+      clearPendingAction(); // reset any pending modal action
+      await logout();
+    } catch (err) {
+      console.error("Sign out error:", err);
+    }
+  };
+
+  // ── Avatar helpers ─────────────────────────────────────────────────────────
+  const displayName = userProfile?.name || user?.displayName || "Account";
+  const initials = displayName
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+  const photoURL = userProfile?.photoURL || user?.photoURL;
+
   return (
     <>
-      {/* ── Top Announcement Bar ─────────────────── */}
+      {/* ── Top Announcement Bar ─────────────────────── */}
       <div className="bg-brand-green-dark text-white text-center py-2 px-4 text-xs font-inter">
         <span>🌿 Free shipping on orders above ₹999 • </span>
         <a
@@ -68,7 +109,7 @@ export default function Navbar() {
         </a>
       </div>
 
-      {/* ── Main Navbar ──────────────────────────── */}
+      {/* ── Main Navbar ──────────────────────────────── */}
       <nav
         className={cn(
           "sticky top-0 z-50 transition-all duration-500",
@@ -79,7 +120,8 @@ export default function Navbar() {
       >
         <div className="container-custom">
           <div className="flex items-center justify-between h-20">
-            {/* ── Brand Logo ───────────────────── */}
+
+            {/* ── Brand Logo ───────────────────────── */}
             <Link href="/" className="flex items-center gap-3 group">
               <div className="w-10 h-10 bg-brand-green-dark rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                 <Leaf className="w-5 h-5 text-white" />
@@ -94,15 +136,13 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* ── Desktop Navigation ────────────── */}
+            {/* ── Desktop Navigation ─────────────────── */}
             <div className="hidden lg:flex items-center gap-8">
               {NAV_ITEMS.map((item) => (
                 <div
                   key={item.label}
                   className="relative"
-                  onMouseEnter={() =>
-                    item.children && setActiveDropdown(item.label)
-                  }
+                  onMouseEnter={() => item.children && setActiveDropdown(item.label)}
                   onMouseLeave={() => setActiveDropdown(null)}
                 >
                   <Link
@@ -157,8 +197,9 @@ export default function Navbar() {
               ))}
             </div>
 
-            {/* ── Desktop Right Actions ─────────── */}
+            {/* ── Desktop Right Actions ─────────────── */}
             <div className="flex items-center gap-3">
+
               {/* Search */}
               <Link href="/shop">
                 <Button
@@ -192,21 +233,118 @@ export default function Navbar() {
                 )}
               </Button>
 
-              {/* WhatsApp CTA */}
-              <Button
-                variant="default"
-                size="sm"
-                className="hidden md:flex"
-                asChild
-              >
-                <a
-                  href={`https://wa.me/${BRAND.whatsapp}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Order Now
-                </a>
-              </Button>
+              {/* ── Auth Section ─────────────────────── */}
+              {hasMounted && (
+                <>
+                  {!user ? (
+                    /* LOGGED OUT — Login button */
+                    <Button
+                      id="navbar-login-btn"
+                      variant="default"
+                      size="sm"
+                      onClick={openLoginModal}
+                      className="hidden md:flex items-center gap-2"
+                    >
+                      <User className="w-4 h-4" />
+                      Login
+                    </Button>
+                  ) : (
+                    /* LOGGED IN — Profile avatar + dropdown */
+                    <div className="relative hidden md:block" ref={profileRef}>
+                      <button
+                        id="navbar-profile-btn"
+                        onClick={() => setIsProfileOpen((v) => !v)}
+                        className="flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-green-dark"
+                        aria-label="Profile menu"
+                      >
+                        {/* Avatar */}
+                        <div className="relative w-9 h-9 rounded-full ring-2 ring-brand-green-dark/20 hover:ring-brand-green-dark/60 transition-all duration-200 overflow-hidden bg-brand-green-dark flex items-center justify-center">
+                          {photoURL ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={photoURL}
+                              alt={displayName}
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <span className="text-white text-xs font-bold font-inter">
+                              {initials || <UserCircle className="w-5 h-5 text-white" />}
+                            </span>
+                          )}
+                        </div>
+                        {/* Name */}
+                        <span className="hidden lg:block font-inter text-sm font-medium text-foreground max-w-[100px] truncate">
+                          {displayName.split(" ")[0]}
+                        </span>
+                        <ChevronDown
+                          className={cn(
+                            "hidden lg:block w-3.5 h-3.5 text-muted-foreground transition-transform duration-200",
+                            isProfileOpen && "rotate-180"
+                          )}
+                        />
+                      </button>
+
+                      {/* Profile Dropdown */}
+                      <AnimatePresence>
+                        {isProfileOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                            transition={{ duration: 0.15, ease: "easeOut" }}
+                            className="absolute right-0 top-full mt-3 w-60 bg-white rounded-2xl shadow-soft-hover border border-border overflow-hidden z-50"
+                          >
+                            {/* User info header */}
+                            <div className="px-4 py-3 bg-brand-cream/60 border-b border-border">
+                              <p className="font-inter text-sm font-semibold text-brand-green-dark truncate">
+                                {displayName}
+                              </p>
+                              <p className="font-inter text-xs text-muted-foreground truncate">
+                                {user.email}
+                              </p>
+                            </div>
+
+                            {/* Menu items */}
+                            <div className="py-1">
+                              <Link
+                                href="/profile"
+                                onClick={() => setIsProfileOpen(false)}
+                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-brand-green-light/20 hover:text-brand-green-dark transition-colors"
+                              >
+                                <UserCircle className="w-4 h-4 text-brand-green-dark/70" />
+                                My Profile
+                              </Link>
+                              <Link
+                                href="/profile"
+                                onClick={() => setIsProfileOpen(false)}
+                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-brand-green-light/20 hover:text-brand-green-dark transition-colors"
+                              >
+                                <Package className="w-4 h-4 text-brand-green-dark/70" />
+                                My Orders
+                              </Link>
+                            </div>
+
+                            <div className="border-t border-border py-1">
+                              <button
+                                id="navbar-signout-btn"
+                                onClick={handleSignOut}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                              >
+                                <LogOut className="w-4 h-4" />
+                                Sign Out
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </>
+              )}
 
               {/* Mobile Menu Toggle */}
               <Button
@@ -227,7 +365,7 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* ── Mobile Menu ──────────────────────────── */}
+      {/* ── Mobile Menu ──────────────────────────────── */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
@@ -252,7 +390,6 @@ export default function Navbar() {
                   >
                     {item.label}
                   </Link>
-                  {/* Mobile sub-items */}
                   {item.children && (
                     <div className="ml-4 mt-1 space-y-1">
                       {item.children.slice(1).map((child) => (
@@ -270,8 +407,54 @@ export default function Navbar() {
                 </div>
               ))}
 
-              {/* Mobile WhatsApp CTA */}
-              <div className="pt-4 pb-2">
+              {/* Mobile Auth section */}
+              <div className="pt-3 border-t border-border space-y-2">
+                {hasMounted && !user ? (
+                  <Button
+                    variant="default"
+                    className="w-full gap-2"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      openLoginModal();
+                    }}
+                  >
+                    <User className="w-4 h-4" />
+                    Login / Sign Up
+                  </Button>
+                ) : hasMounted && user ? (
+                  <div className="space-y-1">
+                    {/* Mobile user info */}
+                    <div className="flex items-center gap-3 px-4 py-2">
+                      <div className="w-8 h-8 rounded-full bg-brand-green-dark flex items-center justify-center shrink-0 overflow-hidden">
+                        {photoURL ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={photoURL} alt={displayName} width={32} height={32} className="object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span className="text-white text-xs font-bold">{initials}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-brand-green-dark truncate">{displayName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      </div>
+                    </div>
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-foreground hover:bg-brand-green-light/20"
+                    >
+                      <Package className="w-4 h-4 text-brand-green-dark/70" /> My Orders
+                    </Link>
+                    <button
+                      onClick={() => { setIsMobileMenuOpen(false); handleSignOut(); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" /> Sign Out
+                    </button>
+                  </div>
+                ) : null}
+
+                {/* WhatsApp CTA */}
                 <Button variant="whatsapp" className="w-full" asChild>
                   <a
                     href={`https://wa.me/${BRAND.whatsapp}`}

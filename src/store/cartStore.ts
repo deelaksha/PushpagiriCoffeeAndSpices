@@ -1,5 +1,3 @@
-"use client";
-
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { CartItem, Product } from "@/types";
@@ -20,21 +18,23 @@ interface CartStore {
   // Actions
   addItem: (
     product: Product,
-    quantity: number,
-    selectedWeight: string,
-    price: number
+    variantId: string,
+    weightLabel: string,
+    price: number,
+    quantity?: number
   ) => void;
   setItems: (items: CartItem[]) => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
+  clearItems: () => void;  // clears items only — used on logout
   openCart: () => void;
   closeCart: () => void;
   toggleCart: () => void;
 
   // Utilities
-  isInCart: (productId: string, weight: string) => boolean;
-  getItemQuantity: (productId: string, weight: string) => number;
+  isInCart: (productId: string, variantId: string) => boolean;
+  getItemQuantity: (productId: string, variantId: string) => number;
 }
 
 // =============================================
@@ -67,11 +67,11 @@ export const useCartStore = create<CartStore>()(
       },
 
       // ─── Add Item to Cart ─────────────────────────
-      addItem: (product, quantity, selectedWeight, price) => {
+      addItem: (product, variantId, weightLabel, price, quantity = 1) => {
         const existingItem = get().items.find(
           (item) =>
             item.product.id === product.id &&
-            item.selectedWeight === selectedWeight
+            item.variantId === variantId
         );
 
         if (existingItem) {
@@ -86,10 +86,11 @@ export const useCartStore = create<CartStore>()(
         } else {
           // Add new item
           const newItem: CartItem = {
-            id: `${product.id}-${selectedWeight}-${Date.now()}`,
+            id: `${product.id}-${variantId}-${Date.now()}`,
             product,
             quantity,
-            selectedWeight,
+            variantId,
+            weightLabel,
             price,
           };
           set((state) => ({ items: [...state.items, newItem] }));
@@ -124,23 +125,26 @@ export const useCartStore = create<CartStore>()(
         set({ items: [] });
       },
 
+      // Clears only items (used on logout — keeps drawer state)
+      clearItems: () => set({ items: [] }),
+
       // ─── Drawer Controls ──────────────────────────
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
       toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
 
       // ─── Utilities ────────────────────────────────
-      isInCart: (productId, weight) => {
+      isInCart: (productId, variantId) => {
         return get().items.some(
           (item) =>
-            item.product.id === productId && item.selectedWeight === weight
+            item.product.id === productId && item.variantId === variantId
         );
       },
 
-      getItemQuantity: (productId, weight) => {
+      getItemQuantity: (productId, variantId) => {
         const item = get().items.find(
           (item) =>
-            item.product.id === productId && item.selectedWeight === weight
+            item.product.id === productId && item.variantId === variantId
         );
         return item?.quantity || 0;
       },

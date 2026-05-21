@@ -311,7 +311,10 @@ export default function CheckoutPage() {
         body:    JSON.stringify(orderPayload),
       });
 
-      if (!orderRes.ok) throw new Error("Failed to create order");
+      if (!orderRes.ok) {
+        const errorData = await orderRes.json().catch(() => null);
+        throw new Error(errorData?.error || "Failed to create order");
+      }
 
       const { orderId: newOrderId, id: docId } = await orderRes.json();
 
@@ -334,13 +337,13 @@ export default function CheckoutPage() {
           productId:   item.product.id,
           productName: item.product.name,
           quantity:    item.quantity,
-          weight:      item.selectedWeight,
+          weight:      item.weightLabel,
           price:       item.price,
           image:       item.product.images?.[0],
         })),
         subtotal:      cartTotal,
         shippingCost:  shipping,
-        discount:      0,
+
         grandTotal,
         paymentMethod: "whatsapp",
         paymentStatus: "pending",
@@ -372,12 +375,12 @@ export default function CheckoutPage() {
                 productId:   item.product.id,
                 productName: item.product.name,
                 quantity:    item.quantity,
-                weight:      item.selectedWeight,
+                weight:      item.weightLabel,
                 price:       item.price,
               })),
               subtotal:      cartTotal,
               shippingCost:  shipping,
-              discount:      0,
+
               grandTotal,
               paymentMethod: "whatsapp",
               paymentStatus: "pending",
@@ -402,9 +405,9 @@ export default function CheckoutPage() {
         }
       }, 800); // small delay to let InvoiceTemplate render in DOM
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Order error:", error);
-      alert("Failed to place order. Please try again.");
+      alert(`Checkout failed: ${error.message || "Please try again."}`);
     }
   };
 
@@ -412,7 +415,7 @@ export default function CheckoutPage() {
   const handleWhatsAppOrder = () => {
     const values = getValues();
     const itemsList = items
-      .map((i) => `• ${i.product.name} (${i.selectedWeight}) x${i.quantity} = ${formatPrice(i.price * i.quantity)}`)
+      .map((i) => `• ${i.product.name} (${i.weightLabel}) x${i.quantity} = ${formatPrice(i.price * i.quantity)}`)
       .join("\n");
     const msg =
       `🌿 *New Order - Pushpagiri Coffee & Spice*\n\n` +
@@ -598,7 +601,7 @@ export default function CheckoutPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-inter text-sm font-medium text-brand-green-dark truncate">{item.product.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.selectedWeight} × {item.quantity}</p>
+                      <p className="text-xs text-muted-foreground">{item.weightLabel} × {item.quantity}</p>
                     </div>
                     <p className="font-inter font-bold text-sm shrink-0">{formatPrice(item.price * item.quantity)}</p>
                   </div>

@@ -15,7 +15,6 @@ export interface Product {
   shortDescription: string;
   category: string;
   price: number;
-  discountPrice?: number;
   stock: number;
   images: string[];
   featured?: boolean;
@@ -31,7 +30,7 @@ export interface Product {
   shippingInfo: string;
   rating: number;
   reviewCount: number;
-  weightOptions: any[];
+  variants: any[];
   tags: string[];
   createdAt: any;
   updatedAt: any;
@@ -44,8 +43,8 @@ export interface CartItem {
   price: number;
   quantity: number;
   image: string;
-  weightOption?: string;
-}
+  variantId?: string;
+  weightLabel?: string;
 
 export interface Order {
   id?: string;
@@ -71,4 +70,25 @@ export interface Order {
   orderStatus: 'processing' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: any;
   updatedAt?: any;
+}
+
+// ── FIRESTORE CART ────────────────────────────────────────────────────────────
+// Lightweight, serialisable cart item stored in Firestore under carts/{uid}.
+// Separate from the in-memory CartItem (types/index.ts) which holds the full Product object.
+export interface FirestoreCartItem {
+  id: string;              // "{productId}-{weight}"
+  productId: string;
+  productName: string;
+  productSlug: string;
+  image: string;
+  variantId: string;
+  weightLabel: string;
+  price: number;
+  quantity: number;
+}
+
+export interface FirestoreCart {
+  uid: string;
+  items: FirestoreCartItem[];
+  updatedAt: any;
 }

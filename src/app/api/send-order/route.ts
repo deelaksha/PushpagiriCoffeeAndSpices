@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       items,            // OrderItemData[]
       subtotal,
       shippingCost,
-      discount,
+
       grandTotal,
       paymentMethod,
       paymentStatus,
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       items,
       subtotal,
       shippingCost: shippingCost ?? 0,
-      discount:     discount ?? 0,
+
       grandTotal,
       paymentMethod: paymentMethod ?? "pending",
       paymentStatus: paymentStatus ?? "pending",
