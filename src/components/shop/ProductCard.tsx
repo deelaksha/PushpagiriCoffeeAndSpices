@@ -11,7 +11,7 @@ import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { Product } from "@/types";
-import { formatPrice, getBadgeClass } from "@/lib/utils";
+import { formatPrice, getBadgeClass, isVideoUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 // =============================================
@@ -64,13 +64,30 @@ export default function ProductCard({
         {/* Image Container */}
         <Link href={`/shop/${product.slug}`} className="block relative overflow-hidden">
           <div className="relative h-56 sm:h-64 bg-brand-cream">
-            <Image
-              src={product.images?.[0]}
-              alt={product.name}
-              fill
-              className="object-cover transition-transform duration-700 group-hover:scale-110"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            />
+            {product.images?.[0] ? (
+              isVideoUrl(product.images[0]) ? (
+                <video
+                  src={product.images[0]}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+              ) : (
+                <Image
+                  src={product.images[0]}
+                  alt={product.name}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                />
+              )
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                No Media
+              </div>
+            )}
 
             {/* Overlay actions */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center gap-3">

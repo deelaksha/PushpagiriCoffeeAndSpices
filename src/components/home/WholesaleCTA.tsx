@@ -32,15 +32,17 @@ export default function WholesaleCTA() {
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button size="lg" variant="gold" asChild>
-                <Link href="/wholesale">Explore Wholesale</Link>
+                <a href={`https://wa.me/${BRAND.whatsapp}`} target="_blank" rel="noopener noreferrer">
+                  💬 WhatsApp Us
+                </a>
               </Button>
               <Button
                 size="lg"
                 className="border-white text-white border-2 bg-transparent hover:bg-white hover:text-brand-green-dark"
                 asChild
               >
-                <a href={`https://wa.me/${BRAND.whatsapp}`} target="_blank" rel="noopener noreferrer">
-                  💬 WhatsApp Us
+                <a href={`tel:${BRAND.phone}`}>
+                  📞 Call Us
                 </a>
               </Button>
             </div>

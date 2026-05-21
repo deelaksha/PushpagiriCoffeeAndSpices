@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadImage } from "@/lib/firebase/storage";
+import { isVideoUrl } from "@/lib/utils";
 import { Product } from "@/types/firebase";
 import { Trash2, Plus, Upload, X } from "lucide-react";
 import NextImage from "next/image";
@@ -28,7 +29,6 @@ const productSchema = z.object({
     id: z.string().optional(),
     weightLabel: z.string().min(1, "Weight label is required"),
     price: z.coerce.number().min(0, "Price must be >= 0"),
-    inStock: z.boolean().default(true),
   })).min(1, "At least one weight variant is required"),
 });
 
@@ -58,8 +58,8 @@ export function ProductForm({ initialData, onSubmitAction }: ProductFormProps) {
       tags: initialData?.tags?.join(", ") || "",
       isFeatured: initialData?.isFeatured || false,
       isActive: initialData?.isActive !== false,
-      variants: initialData?.variants?.length ? initialData.variants.map(v => ({...v, inStock: v.stock > 0})) : [
-        { id: Date.now().toString(), weightLabel: "500g", price: 0, inStock: true }
+      variants: initialData?.variants?.length ? initialData.variants : [
+        { id: Date.now().toString(), weightLabel: "500g", price: 0 }
       ],
     },
   });
@@ -115,10 +115,8 @@ export function ProductForm({ initialData, onSubmitAction }: ProductFormProps) {
         stock: inStock ? 999999 : 0,
         tags: values.tags ? values.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
         variants: variants.map(v => {
-          const { inStock: vInStock, ...vRest } = v;
           return {
-            ...vRest,
-            stock: vInStock ? 999999 : 0,
+            ...v,
             id: v.id || Date.now().toString() + Math.random().toString(36).substring(7)
           };
         }),
@@ -151,22 +149,19 @@ export function ProductForm({ initialData, onSubmitAction }: ProductFormProps) {
             {form.formState.errors.name && <p className="text-red-500 text-xs mt-1">{form.formState.errors.name.message}</p>}
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-1 block">Slug *</label>
-            <Input {...form.register("slug")} placeholder="e.g. premium-arabica-coffee" />
-          </div>
+
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">Price (₹) *</label>
               <Input type="number" {...form.register("price")} />
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Stock Status *</label>
-              <select {...form.register("inStock", { setValueAs: v => v === "true" })} className="w-full h-10 px-3 py-2 border border-input rounded-md text-sm bg-background">
-                <option value="true">In Stock</option>
-                <option value="false">Out of Stock</option>
-              </select>
+            <div className="flex flex-col justify-center">
+              <label className="text-sm font-medium mb-2 block">Stock Status *</label>
+              <label className="flex items-center gap-2 cursor-pointer bg-gray-50 border px-4 py-2.5 rounded-lg w-fit hover:bg-gray-100 transition-colors">
+                <input type="checkbox" {...form.register("inStock")} className="w-4 h-4 text-brand-green-dark rounded" />
+                <span className="text-sm font-medium">In Stock</span>
+              </label>
             </div>
           </div>
 
@@ -183,13 +178,13 @@ export function ProductForm({ initialData, onSubmitAction }: ProductFormProps) {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Weight Variants *</label>
-              <Button type="button" variant="outline" size="sm" onClick={() => append({ weightLabel: "", price: 0, inStock: true, id: Date.now().toString() })}>
+              <Button type="button" variant="outline" size="sm" onClick={() => append({ weightLabel: "", price: 0, id: Date.now().toString() })}>
                 <Plus className="w-4 h-4 mr-2" /> Add Weight Option
               </Button>
             </div>
             {fields.map((field, index) => (
               <div key={field.id} className="flex gap-2 items-start border p-3 rounded-lg relative bg-gray-50/50">
-                <div className="flex-1 grid grid-cols-3 gap-2">
+                <div className="flex-1 grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-xs text-muted-foreground block mb-1">Weight Label</label>
                     <Input {...form.register(`variants.${index}.weightLabel` as const)} placeholder="e.g. 250g" className="h-8 text-sm" />
@@ -198,13 +193,6 @@ export function ProductForm({ initialData, onSubmitAction }: ProductFormProps) {
                   <div>
                     <label className="text-xs text-muted-foreground block mb-1">Price (₹)</label>
                     <Input type="number" {...form.register(`variants.${index}.price` as const)} className="h-8 text-sm" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Status</label>
-                    <select {...form.register(`variants.${index}.inStock` as const, { setValueAs: v => v === "true" })} className="w-full h-8 px-2 py-1 border border-input rounded-md text-sm bg-background">
-                      <option value="true">In Stock</option>
-                      <option value="false">Out of Stock</option>
-                    </select>
                   </div>
                 </div>
                 {fields.length > 1 && (
@@ -249,13 +237,17 @@ export function ProductForm({ initialData, onSubmitAction }: ProductFormProps) {
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block">Product Images</label>
+            <label className="text-sm font-medium mb-2 block">Product Media (Images & Videos)</label>
             
-            {/* Existing Images */}
+            {/* Existing Media */}
             <div className="grid grid-cols-3 gap-4 mb-4">
               {existingImages.map((url, i) => (
-                <div key={i} className="relative group border rounded-lg overflow-hidden aspect-square">
-                  <NextImage src={url} alt="Product image" fill className="object-cover" />
+                <div key={i} className="relative group border rounded-lg overflow-hidden aspect-square bg-black">
+                  {isVideoUrl(url) ? (
+                    <video src={url} className="w-full h-full object-cover" muted playsInline />
+                  ) : (
+                    <NextImage src={url} alt="Product media" fill className="object-cover" />
+                  )}
                   <button type="button" onClick={() => removeExistingImage(url)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                     <X className="w-3 h-3" />
                   </button>
@@ -263,8 +255,12 @@ export function ProductForm({ initialData, onSubmitAction }: ProductFormProps) {
               ))}
               {/* New Files Preview */}
               {newImageFiles.map((file, i) => (
-                <div key={`new-${i}`} className="relative group border rounded-lg overflow-hidden aspect-square bg-gray-50">
-                  <NextImage src={URL.createObjectURL(file)} alt="New preview" fill className="object-cover opacity-70" />
+                <div key={`new-${i}`} className="relative group border rounded-lg overflow-hidden aspect-square bg-black">
+                  {file.type.startsWith("video/") ? (
+                    <video src={URL.createObjectURL(file)} className="w-full h-full object-cover opacity-70" muted playsInline />
+                  ) : (
+                    <NextImage src={URL.createObjectURL(file)} alt="New preview" fill className="object-cover opacity-70" />
+                  )}
                   <span className="absolute bottom-1 left-1 bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded">NEW</span>
                   <button type="button" onClick={() => removeNewFile(i)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                     <X className="w-3 h-3" />
@@ -275,8 +271,8 @@ export function ProductForm({ initialData, onSubmitAction }: ProductFormProps) {
               {/* Upload Button */}
               <label className="border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-brand-green-light transition-colors aspect-square">
                 <Upload className="w-6 h-6 text-gray-400 mb-2" />
-                <span className="text-xs font-medium text-gray-500">Upload</span>
-                <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
+                <span className="text-xs font-medium text-gray-500">Upload Media</span>
+                <input type="file" multiple accept="image/*,video/*" className="hidden" onChange={handleFileChange} />
               </label>
             </div>
           </div>

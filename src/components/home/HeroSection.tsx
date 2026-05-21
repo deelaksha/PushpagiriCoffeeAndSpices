@@ -33,7 +33,7 @@ export default function HeroSection() {
             >
               <Leaf className="w-4 h-4 text-brand-green-light" />
               <span className="font-inter text-sm text-brand-green-light font-medium">
-                Organic · Single Estate · Coorg, Karnataka
+                Organic · Premium Quality · Coorg, Karnataka
               </span>
             </motion.div>
 
@@ -53,9 +53,9 @@ export default function HeroSection() {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="font-inter text-lg text-white/80 mb-10 max-w-lg leading-relaxed"
             >
-              Premium single-origin Arabica & Robusta coffee, hand-picked black pepper,
-              aromatic cardamom, and authentic Coorg spices — all grown on our family
-              estate at Pushpagiri, Choudlu.
+              Premium Arabica & Robusta coffee, hand-picked black pepper,
+              aromatic cardamom, and authentic spices — sourced directly from
+              the pristine hills of Coorg.
             </motion.p>
 
             <motion.div

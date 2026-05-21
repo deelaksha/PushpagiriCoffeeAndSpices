@@ -15,7 +15,7 @@ import { useAuthStore } from "@/store/authStore";
 import { BRAND } from "@/constants";
 import { getDocuments } from "@/lib/firebase/firestore";
 import { where, limit } from "firebase/firestore"; // needed for queries
-import { formatPrice, generateWhatsAppOrderUrl, getBadgeClass } from "@/lib/utils";
+import { formatPrice, generateWhatsAppOrderUrl, getBadgeClass, isVideoUrl } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 export default function ProductDetailPage() {
@@ -135,17 +135,29 @@ export default function ProductDetailPage() {
               className="relative h-[400px] lg:h-[500px] rounded-3xl overflow-hidden bg-white shadow-soft mb-4"
             >
               {images[selectedImage] ? (
-                <Image
-                  src={images[selectedImage]}
-                  alt={name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                  priority
-                />
+                isVideoUrl(images[selectedImage]) ? (
+                  <video
+                    src={images[selectedImage]}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    controls
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Image
+                    src={images[selectedImage]}
+                    alt={name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    priority
+                  />
+                )
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
-                  No Image Available
+                  No Media Available
                 </div>
               )}
               {badge && (
@@ -162,7 +174,11 @@ export default function ProductDetailPage() {
                     onClick={() => setSelectedImage(i)}
                     className={cn("relative h-20 w-20 rounded-xl overflow-hidden border-2 transition-all", i === selectedImage ? "border-brand-green-dark" : "border-transparent")}
                   >
-                    <Image src={img} alt={`View ${i + 1}`} fill className="object-cover" sizes="80px" />
+                    {isVideoUrl(img) ? (
+                      <video src={img} className="w-full h-full object-cover" />
+                    ) : (
+                      <Image src={img} alt={`View ${i + 1}`} fill className="object-cover" sizes="80px" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -225,14 +241,20 @@ export default function ProductDetailPage() {
 
             {/* CTA Buttons */}
             <div className="flex gap-3 mb-8">
-              <Button size="lg" className="flex-1" onClick={handleAddToCart}>
-                <ShoppingCart className="w-5 h-5" /> Add to Cart
+              <Button size="lg" className="flex-1" onClick={handleAddToCart} disabled={productData.stock === 0}>
+                <ShoppingCart className="w-5 h-5" /> {productData.stock === 0 ? "Out of Stock" : "Add to Cart"}
               </Button>
-              <Button size="lg" variant="whatsapp" asChild>
-                <a href={generateWhatsAppOrderUrl(BRAND.whatsapp, waMessage)} target="_blank" rel="noopener noreferrer">
-                  <MessageCircle className="w-5 h-5" /> Order on WhatsApp
-                </a>
-              </Button>
+              {productData.stock === 0 ? (
+                <Button size="lg" variant="whatsapp" disabled>
+                  <MessageCircle className="w-5 h-5" /> Out of Stock
+                </Button>
+              ) : (
+                <Button size="lg" variant="whatsapp" asChild>
+                  <a href={generateWhatsAppOrderUrl(BRAND.whatsapp, waMessage)} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="w-5 h-5" /> Order on WhatsApp
+                  </a>
+                </Button>
+              )}
             </div>
             {/* Highlights */}
             <div className="bg-white rounded-2xl p-5 mb-6 shadow-card">

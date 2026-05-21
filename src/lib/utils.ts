@@ -158,3 +158,18 @@ export function shuffleArray<T>(array: T[]): T[] {
   }
   return arr;
 }
+
+/**
+ * Checks if a given URL is a video based on common extensions or keywords.
+ */
+export function isVideoUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  const lowerUrl = url.toLowerCase();
+  return (
+    lowerUrl.includes(".mp4") ||
+    lowerUrl.includes(".webm") ||
+    lowerUrl.includes(".mov") ||
+    lowerUrl.includes(".ogg") ||
+    lowerUrl.includes("video")
+  );
+}

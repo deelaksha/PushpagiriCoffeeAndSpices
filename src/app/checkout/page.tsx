@@ -21,6 +21,7 @@ import { useAuthStore } from "@/store/authStore";
 import InvoiceTemplate from "@/components/invoice/InvoiceTemplate";
 import { generateInvoicePDF, downloadInvoicePDF, buildInvoiceFileName } from "@/components/invoice/InvoicePDFGenerator";
 import type { OrderEmailData } from "@/lib/invoiceHelpers";
+import { toast } from "sonner";
 
 const INDIAN_STATES = [
   "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh",
@@ -407,7 +408,7 @@ export default function CheckoutPage() {
 
     } catch (error: any) {
       console.error("Order error:", error);
-      alert(`Checkout failed: ${error.message || "Please try again."}`);
+      toast.error(error.message || "Failed to process checkout. Please try again.");
     }
   };
 

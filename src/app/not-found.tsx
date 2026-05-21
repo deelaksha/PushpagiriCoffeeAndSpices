@@ -51,7 +51,6 @@ export default function NotFound() {
             {[
               { label: "Coffee Products", href: "/shop?category=coffee" },
               { label: "Spices", href: "/shop?category=spices" },
-              { label: "Wholesale", href: "/wholesale" },
               { label: "About Us", href: "/about" },
               { label: "Contact", href: "/contact" },
             ].map((link) => (

@@ -8,7 +8,7 @@ import { getDocuments, deleteDocument } from "@/lib/firebase/firestore";
 import { Product } from "@/types/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatPrice, cn } from "@/lib/utils";
+import { formatPrice, cn, isVideoUrl } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function ProductsPage() {
@@ -94,9 +94,13 @@ export default function ProductsPage() {
                     <td className="px-6 py-4 flex items-center gap-4">
                       <div className="w-12 h-12 relative rounded bg-gray-100 overflow-hidden shrink-0">
                         {product.images?.[0] ? (
-                          <NextImage src={product.images[0]} alt={product.name} fill className="object-cover" />
+                          isVideoUrl(product.images[0]) ? (
+                            <video src={product.images[0]} className="w-full h-full object-cover" muted playsInline />
+                          ) : (
+                            <NextImage src={product.images[0]} alt={product.name} fill className="object-cover" />
+                          )
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">No Img</div>
+                          <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">No Media</div>
                         )}
                       </div>
                       <div>

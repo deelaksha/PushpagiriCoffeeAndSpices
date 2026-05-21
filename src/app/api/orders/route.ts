@@ -21,43 +21,48 @@ export async function POST(req: NextRequest) {
     // 3. Execute Firestore Transaction using Client SDK
     await runTransaction(db, async (t) => {
       // --- A. Read all product documents to check stock ---
-      const requestedQuantities: Record<string, number> = {};
-      data.products.forEach((item: any) => {
-        const pId = item.product?.id || item.productId;
-        if (!pId) return;
-        requestedQuantities[pId] = (requestedQuantities[pId] || 0) + (item.quantity || 1);
-      });
+      // Find unique product IDs
+      const uniqueProductIds = Array.from(new Set(data.products.map((item: any) => item.product?.id || item.productId).filter(Boolean))) as string[];
 
-      const productIds = Object.keys(requestedQuantities);
-      if (productIds.length === 0) {
+      if (uniqueProductIds.length === 0) {
         throw new Error("No valid products found in order");
       }
 
-      // In client SDK, we can't do t.getAll(). We must do a loop of t.get()
       const productDocs = await Promise.all(
-        productIds.map(id => t.get(doc(db, 'products', id)))
+        uniqueProductIds.map(id => t.get(doc(db, 'products', id)))
       );
 
-      // --- B. Verify stock availability ---
-      productDocs.forEach((productDoc, index) => {
-        if (!productDoc.exists()) {
-          return; // Skip dummy products
+      // --- B. Verify and Deduct stock ---
+      // We will prepare the updates to avoid multiple updates to the same document
+      const productUpdates: Record<string, any> = {};
+
+      data.products.forEach((item: any) => {
+        const pId = item.product?.id || item.productId;
+        if (!pId) return;
+
+        const productDoc = productDocs.find(d => d.id === pId);
+        if (!productDoc || !productDoc.exists()) return;
+
+        const productData = productUpdates[pId] || productDoc.data();
+        const requestedQty = item.quantity || 1;
+
+        // Check global product stock
+        if ((productData.stock || 0) < requestedQty) {
+          throw new Error(`Insufficient stock for ${productData.name || 'a product'}. Only ${productData.stock || 0} left.`);
         }
-        const productData = productDoc.data();
-        const requestedQty = requestedQuantities[productIds[index]];
-        
-        if ((productData?.stock || 0) < requestedQty) {
-          throw new Error(`Insufficient stock for ${productData?.name || 'a product'}. Only ${productData?.stock || 0} left.`);
-        }
+
+        // Deduct global stock
+        productUpdates[pId] = {
+          ...productData,
+          stock: Math.max(0, productData.stock - requestedQty)
+        };
       });
 
-      // --- C. Deduct stock ---
-      productDocs.forEach((productDoc, index) => {
-        if (!productDoc.exists()) return; // Skip stock deduction for dummy products
-
-        const requestedQty = requestedQuantities[productIds[index]];
-        t.update(productDoc.ref, {
-          stock: increment(-requestedQty),
+      // --- C. Apply Updates ---
+      Object.keys(productUpdates).forEach(pId => {
+        const productRef = doc(db, 'products', pId);
+        t.update(productRef, {
+          stock: productUpdates[pId].stock,
           updatedAt: serverTimestamp()
         });
       });
@@ -103,8 +108,9 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('Error in checkout transaction:', error);
+    const isInsufficientStock = error.message?.includes('Insufficient stock');
     return NextResponse.json({ 
       error: error.message || 'Failed to process checkout transaction' 
-    }, { status: 500 });
+    }, { status: isInsufficientStock ? 400 : 500 });
   }
 }

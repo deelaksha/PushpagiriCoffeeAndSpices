@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ShoppingCart, Trash2, Plus, Minus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/store/cartStore";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, isVideoUrl } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
 const FREE_SHIPPING_THRESHOLD = 500;
@@ -133,13 +133,30 @@ export default function CartDrawer() {
                         >
                           {/* Product Image */}
                           <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-white shrink-0">
-                            <Image
-                              src={item.product.images[0]}
-                              alt={item.product.name}
-                              fill
-                              className="object-cover"
-                              sizes="80px"
-                            />
+                            {item.product.images?.[0] ? (
+                              isVideoUrl(item.product.images[0]) ? (
+                                <video
+                                  src={item.product.images[0]}
+                                  autoPlay
+                                  loop
+                                  muted
+                                  playsInline
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Image
+                                  src={item.product.images[0]}
+                                  alt={item.product.name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="80px"
+                                />
+                              )
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-[10px] text-gray-400">
+                                No Media
+                              </div>
+                            )}
                           </div>
 
                           {/* Product Info */}

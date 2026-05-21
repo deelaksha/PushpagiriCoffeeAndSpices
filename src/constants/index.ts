@@ -18,7 +18,6 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "About", href: "/about" },
-  { label: "Wholesale", href: "/wholesale" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -75,7 +74,7 @@ export const PRODUCTS: Product[] = [
     roastLevel: "medium",
     flavorNotes: ["Floral", "Citrus", "Dark Chocolate", "Caramel"],
     highlights: [
-      "Single estate, traceable origin",
+      "Premium quality, traceable origin",
       "Hand-picked at peak ripeness",
       "Sun-dried & small-batch roasted",
       "100% organic certified",
@@ -606,9 +605,9 @@ export const WHY_CHOOSE_US = [
   },
   {
     icon: "MapPin",
-    title: "Single Estate",
+    title: "Sourced from Coorg",
     description:
-      "Every product is traceable to our Pushpagiri estate in Choudlu, Coorg — no middlemen, just pure origin quality.",
+      "Every product is sourced directly from the pristine hills of Coorg — no middlemen, just pure origin quality.",
   },
   {
     icon: "Award",
